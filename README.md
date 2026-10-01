@@ -43,6 +43,14 @@ npm run dev
 | `npm run format`    | `prettier --write .`            | Format the codebase.                        |
 | `npm run test`      | `vitest run`                    | Run the test suite once.                    |
 
+> **Dependency pin — do not change without rebuilding and smoke-testing the production SSR server.**
+> `package.json` pins `vite` to `8.1.5` and overrides `rolldown` to `1.1.0`. Vite `8.2.x`
+> (Rolldown `1.2.2+`) emits a broken Nitro SSR chunk that re-exports an undeclared namespace, so
+> **every route 500s in production while `vite build` still exits 0** (TanStack/router#8031,
+> nitro#4533). `8.1.5` + `rolldown 1.1.0` is the known-good combination. After any dependency
+> change, run `NITRO_PRESET=node-server npm run build` and boot `.output/server/index.mjs` to
+> smoke-test every route before deploying.
+
 ## Quality gate
 
 A task is complete only when all of these pass:

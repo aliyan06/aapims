@@ -30,6 +30,7 @@ A **desktop POC** for the Aviation Authority Permit Integrated Management System
 - **No new heavy dependencies.** Prefer what is installed. No backend, auth, network calls or secrets. No `localStorage` dependency for correctness.
 - TypeScript strict, no `any` (except generated files). One component per file. Named exports for components.
 - Keep the presenter panel and dev inspector **outside** the device frame.
+- **Do not change the pinned `vite` (8.1.5) / `rolldown` (1.1.0) override** without rebuilding and booting the production SSR server (`NITRO_PRESET=node-server npm run build` → `node .output/server/index.mjs`) and smoking every route. Vite 8.2.x breaks the Nitro SSR chunk (every route 500s while `vite build` passes) — see README.
 
 ## Architecture (already built — build on it)
 

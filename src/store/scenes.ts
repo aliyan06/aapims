@@ -1,4 +1,3 @@
-import { STORY_IDS } from "@/data/types";
 import type { Role } from "@/data/types";
 import type { AppState } from "./types";
 import {
@@ -21,8 +20,16 @@ export type ScenePreset = {
   apply: (state: AppState) => void;
 };
 
-const APP = STORY_IDS.application;
-const PERMIT = STORY_IDS.permit;
+/**
+ * Hero id literals are declared here (not read from an imported binding) so this
+ * module has no module-scope dependency on another module's initialisation.
+ * Under the chunked production SSR bundle, module-scope reads of imported values
+ * can hit an uninitialised binding and crash every request.
+ */
+const HERO_APP = "app-aap-2026-00125";
+const HERO_REF = "AAP-2026-00125";
+const HERO_PERMIT = "prm-caa-of-2026-00452";
+const HERO_PERMIT_NUMBER = "CAA-OF-2026-00452";
 
 export const SCENES: readonly ScenePreset[] = [
   {
@@ -54,9 +61,9 @@ export const SCENES: readonly ScenePreset[] = [
     label: "3 · Application submitted",
     role: "operatorAdmin",
     clock: "2026-10-10T09:20:00.000Z",
-    route: `/operator/applications/${STORY_IDS.applicationReference}`,
+    route: `/operator/applications/${HERO_REF}`,
     apply: (state) => {
-      submitApplication(state, APP);
+      submitApplication(state, HERO_APP);
     },
   },
   {
@@ -64,10 +71,10 @@ export const SCENES: readonly ScenePreset[] = [
     label: "4 · Reviewer recommends",
     role: "reviewer",
     clock: "2026-10-10T10:05:00.000Z",
-    route: `/authority/applications/${STORY_IDS.applicationReference}`,
+    route: `/authority/applications/${HERO_REF}`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
     },
   },
   {
@@ -75,11 +82,11 @@ export const SCENES: readonly ScenePreset[] = [
     label: "5 · Finance clears funds",
     role: "finance",
     clock: "2026-10-10T10:40:00.000Z",
-    route: `/authority/finance/${STORY_IDS.applicationReference}`,
+    route: `/authority/finance/${HERO_REF}`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
     },
   },
   {
@@ -87,12 +94,12 @@ export const SCENES: readonly ScenePreset[] = [
     label: "6 · Technical review passed",
     role: "reviewer",
     clock: "2026-10-10T11:15:00.000Z",
-    route: `/authority/applications/${STORY_IDS.applicationReference}/technical`,
+    route: `/authority/applications/${HERO_REF}/technical`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
     },
   },
   {
@@ -100,14 +107,14 @@ export const SCENES: readonly ScenePreset[] = [
     label: "7 · Permit approved & issued",
     role: "approver",
     clock: "2026-10-10T11:50:00.000Z",
-    route: `/authority/permits/${STORY_IDS.permitNumber}`,
+    route: `/authority/permits/${HERO_PERMIT_NUMBER}`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
-      approvePermit(state, APP);
-      issuePermit(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
+      approvePermit(state, HERO_APP);
+      issuePermit(state, HERO_APP);
     },
   },
   {
@@ -117,12 +124,12 @@ export const SCENES: readonly ScenePreset[] = [
     clock: "2026-10-10T12:05:00.000Z",
     route: "/verify",
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
-      approvePermit(state, APP);
-      issuePermit(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
+      approvePermit(state, HERO_APP);
+      issuePermit(state, HERO_APP);
     },
   },
   {
@@ -130,16 +137,16 @@ export const SCENES: readonly ScenePreset[] = [
     label: "9 · Revision requested",
     role: "operatorAdmin",
     clock: "2026-10-10T14:30:00.000Z",
-    route: `/operator/permits/${STORY_IDS.permitNumber}`,
+    route: `/operator/permits/${HERO_PERMIT_NUMBER}`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
-      approvePermit(state, APP);
-      issuePermit(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
+      approvePermit(state, HERO_APP);
+      issuePermit(state, HERO_APP);
       requestRevision(state, {
-        permitId: PERMIT,
+        permitId: HERO_PERMIT,
         type: "Date / Time Change",
         originalValue: "15 Oct 2026 — 08:30 UTC",
         newValue: "15 Oct 2026 — 10:00 UTC",
@@ -152,16 +159,16 @@ export const SCENES: readonly ScenePreset[] = [
     label: "10 · Revision approved (V2)",
     role: "approver",
     clock: "2026-10-10T15:10:00.000Z",
-    route: `/authority/permits/${STORY_IDS.permitNumber}`,
+    route: `/authority/permits/${HERO_PERMIT_NUMBER}`,
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
-      approvePermit(state, APP);
-      issuePermit(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
+      approvePermit(state, HERO_APP);
+      issuePermit(state, HERO_APP);
       requestRevision(state, {
-        permitId: PERMIT,
+        permitId: HERO_PERMIT,
         type: "Date / Time Change",
         originalValue: "15 Oct 2026 — 08:30 UTC",
         newValue: "15 Oct 2026 — 10:00 UTC",
@@ -177,14 +184,14 @@ export const SCENES: readonly ScenePreset[] = [
     clock: "2026-10-10T15:30:00.000Z",
     route: "/authority/audit",
     apply: (state) => {
-      submitApplication(state, APP);
-      recommendApproval(state, APP);
-      clearFinancialHold(state, APP);
-      passTechnicalReview(state, APP);
-      approvePermit(state, APP);
-      issuePermit(state, APP);
+      submitApplication(state, HERO_APP);
+      recommendApproval(state, HERO_APP);
+      clearFinancialHold(state, HERO_APP);
+      passTechnicalReview(state, HERO_APP);
+      approvePermit(state, HERO_APP);
+      issuePermit(state, HERO_APP);
       requestRevision(state, {
-        permitId: PERMIT,
+        permitId: HERO_PERMIT,
         type: "Date / Time Change",
         originalValue: "15 Oct 2026 — 08:30 UTC",
         newValue: "15 Oct 2026 — 10:00 UTC",

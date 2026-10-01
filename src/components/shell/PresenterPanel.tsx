@@ -39,13 +39,6 @@ const ROLE_ICON: Record<Role, ComponentType<{ size?: number; className?: string 
   public: ScanLine,
 };
 
-/** Presenter role groups, matching the specification's Authority/Customer sides. */
-const ROLE_SECTIONS: readonly { label: string; roles: readonly Role[] }[] = [
-  { label: "Authority Side", roles: AUTHORITY_ROLES },
-  { label: "Customer Side", roles: CUSTOMER_ROLES },
-  { label: "Public", roles: PUBLIC_ROLES },
-];
-
 type PresenterPanelProps = {
   open: boolean;
   onToggle: () => void;
@@ -58,6 +51,14 @@ export function PresenterPanel({ open, onToggle }: PresenterPanelProps) {
   const clockIso = useAppStore((s) => s.clock.iso);
   const signIn = useAppStore((s) => s.signIn);
   const resetDemo = useAppStore((s) => s.resetDemo);
+
+  // Built at render time (not module scope) to avoid depending on another
+  // module's initialisation order in the chunked SSR bundle.
+  const roleSections: { label: string; roles: readonly Role[] }[] = [
+    { label: "Authority Side", roles: AUTHORITY_ROLES },
+    { label: "Customer Side", roles: CUSTOMER_ROLES },
+    { label: "Public", roles: PUBLIC_ROLES },
+  ];
 
   if (!open) {
     return (
@@ -105,7 +106,7 @@ export function PresenterPanel({ open, onToggle }: PresenterPanelProps) {
           <div className="mt-1 truncate text-[11px] text-white/60">Representative demo state</div>
         </section>
 
-        {ROLE_SECTIONS.map((section) => (
+        {roleSections.map((section) => (
           <section key={section.label}>
             <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
               {section.label}
