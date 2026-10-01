@@ -4,7 +4,13 @@ import { Bell, BellRing, CheckCheck } from "lucide-react";
 import { EmptyState, PortalPage, SectionCard, UnderlineTabs } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABEL, isAuthorityRole } from "@/components/shell/roles";
-import { formatDateTime, useActiveRole, useAppStore, useNotifications } from "@/store";
+import {
+  formatDateTime,
+  roleToAudience,
+  useActiveRole,
+  useAppStore,
+  useNotifications,
+} from "@/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/authority/notifications")({
@@ -17,7 +23,7 @@ type TabKey = (typeof TAB_KEYS)[number];
 function AuthorityNotifications() {
   const activeRole = useActiveRole();
   const role = isAuthorityRole(activeRole) ? activeRole : "reviewer";
-  const notifications = useNotifications(role);
+  const notifications = useNotifications(roleToAudience(role));
   const markNotificationRead = useAppStore((s) => s.markNotificationRead);
   const [tab, setTab] = useState<TabKey>("all");
 

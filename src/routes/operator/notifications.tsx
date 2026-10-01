@@ -14,7 +14,7 @@ const TAB_KEYS = ["all", "unread"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 function NotificationsScreen() {
-  const notifications = useNotifications("operator");
+  const notifications = useNotifications("customer");
   const markNotificationRead = useAppStore((s) => s.markNotificationRead);
   const [tab, setTab] = useState<TabKey>("all");
 

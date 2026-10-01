@@ -93,6 +93,29 @@ function FinanceQueue() {
       ),
     },
     {
+      key: "billingModel",
+      header: "Billing Model",
+      cell: (application) => (
+        <span className="whitespace-nowrap text-text-muted">
+          {application.finance.billingModel}
+        </span>
+      ),
+    },
+    {
+      key: "outstanding",
+      header: "Outstanding",
+      align: "right",
+      cell: (application) => {
+        const outstanding = application.finance.outstanding ?? 0;
+        if (outstanding <= 0) return "—";
+        return (
+          <span className="font-semibold text-status-awaiting">
+            {application.finance.currency} {outstanding.toLocaleString()}
+          </span>
+        );
+      },
+    },
+    {
       key: "payment",
       header: "Payment",
       cell: (application) => <PaymentBadge status={application.finance.paymentStatus} />,

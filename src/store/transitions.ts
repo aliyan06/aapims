@@ -4,6 +4,7 @@ import {
   type ApplicationStatus,
   type AuditEntry,
   type Counters,
+  type NotificationAudience,
   type NotificationRecord,
   type PermitRecord,
   type RevisionRecord,
@@ -68,7 +69,12 @@ function addAudit(
   state.world.audit.unshift(record);
 }
 
-function notify(state: AppState, targetRole: Role, type: string, text: string): void {
+function notify(
+  state: AppState,
+  targetRole: NotificationAudience,
+  type: string,
+  text: string,
+): void {
   const record: NotificationRecord = {
     id: nextId("ntf", state.world.notifications.length),
     targetRole,
@@ -115,13 +121,23 @@ export function submitApplication(state: AppState, applicationId: string): Trans
   if (app.status !== "DRAFT" && app.status !== "RETURNED") {
     return fail(label, `Only draft or returned applications can be submitted.`);
   }
+  // Enforce verified operator + valid agent authorization (features.md §3).
+  if (app.agentId) {
+    const agent = state.world.agents.find((item) => item.id === app.agentId);
+    if (!agent || agent.authorization !== "VERIFIED" || agent.status !== "ACTIVE") {
+      return fail(
+        label,
+        "The linked agent authorization is not valid. Update or remove the agent before submitting.",
+      );
+    }
+  }
   const previous = app.status;
   setStatus(
     app,
     "SUBMITTED",
     state.clock.iso,
     STORY_IDS.operatorActor,
-    "operator",
+    "operatorAdmin",
     "Application submitted for review.",
   );
   app.submittedAt = state.clock.iso;
@@ -129,7 +145,7 @@ export function submitApplication(state: AppState, applicationId: string): Trans
   adjust(state, "newApplications", 1);
   addAudit(state, {
     actor: STORY_IDS.operatorActor,
-    role: "operator",
+    role: "operatorAdmin",
     action: "Application submitted",
     status: "SUBMITTED",
     applicationReference: app.reference,
@@ -175,13 +191,13 @@ export function requestRevision(state: AppState, input: RequestRevisionInput): T
     "REVISION REQUESTED",
     state.clock.iso,
     STORY_IDS.operatorActor,
-    "operator",
+    "operatorAdmin",
     `${input.type} requested.`,
   );
   adjust(state, counterKeyFor(previous), -1);
   addAudit(state, {
     actor: STORY_IDS.operatorActor,
-    role: "operator",
+    role: "operatorAdmin",
     action: `Revision requested — ${input.type}`,
     status: "REVISION REQUESTED",
     applicationReference: app.reference,
@@ -256,7 +272,7 @@ export function returnApplication(
   });
   notify(
     state,
-    "operator",
+    "customer",
     "APPLICATION",
     `Application ${app.reference} was returned for correction.`,
   );
@@ -315,7 +331,7 @@ export function verifyPayment(state: AppState, applicationId: string): Transitio
     oldValue: "UNPAID",
     newValue: "PAID",
   });
-  notify(state, "operator", "PAYMENT", `Payment received for ${app.reference}.`);
+  notify(state, "customer", "PAYMENT", `Payment received for ${app.reference}.`);
   return done(label, `Payment verified for ${app.reference}.`);
 }
 
@@ -338,7 +354,7 @@ export function placeFinancialHold(
     oldValue: "PENDING CLEARANCE",
     newValue: "ON HOLD",
   });
-  notify(state, "operator", "FINANCE", `A financial hold was placed on ${app.reference}.`);
+  notify(state, "customer", "FINANCE", `A financial hold was placed on ${app.reference}.`);
   return done(label, `Financial hold placed on ${app.reference}.`, "info");
 }
 
@@ -401,7 +417,7 @@ export function approvePermit(state: AppState, applicationId: string): Transitio
     oldValue: "AWAITING FINAL APPROVAL",
     newValue: "APPROVED",
   });
-  notify(state, "operator", "APPROVAL", `Application ${app.reference} has been approved.`);
+  notify(state, "customer", "APPROVAL", `Application ${app.reference} has been approved.`);
   return done(label, `${app.reference} approved. Ready for issuance.`);
 }
 
@@ -435,7 +451,7 @@ export function rejectPermit(
     oldValue: previous,
     newValue: "REJECTED",
   });
-  notify(state, "operator", "APPLICATION", `Application ${app.reference} was rejected.`);
+  notify(state, "customer", "APPLICATION", `Application ${app.reference} was rejected.`);
   return done(label, `${app.reference} rejected.`, "info");
 }
 
@@ -471,6 +487,7 @@ export function issuePermit(state: AppState, applicationId: string): TransitionR
     signedBy: state.world.authority.signatory,
     checksum: `CHK-${app.reference.slice(-3)}-2026`,
     verificationReference: `VRF-${app.reference.slice(-3)}-2026`,
+    agentId: app.agentId,
     revisionIds: [],
   };
   state.world.permits.unshift(permit);
@@ -495,7 +512,7 @@ export function issuePermit(state: AppState, applicationId: string): TransitionR
     oldValue: "APPROVED",
     newValue: "ISSUED",
   });
-  notify(state, "operator", "PERMIT", `Permit ${permit.permitNumber} has been issued.`);
+  notify(state, "customer", "PERMIT", `Permit ${permit.permitNumber} has been issued.`);
   notify(state, "public", "PERMIT", `Permit ${permit.permitNumber} is now verifiable.`);
   return { ...done(label, `Permit ${permit.permitNumber} issued.`), value: permit.permitNumber };
 }
@@ -534,7 +551,7 @@ export function approveRevision(state: AppState, revisionId: string): Transition
   });
   notify(
     state,
-    "operator",
+    "customer",
     "REVISION",
     `Revision approved. Permit ${permit.permitNumber} reissued as V${permit.version}.`,
   );
@@ -575,7 +592,7 @@ export function rejectRevision(state: AppState, revisionId: string): TransitionR
   });
   notify(
     state,
-    "operator",
+    "customer",
     "REVISION",
     `Revision rejected. Permit ${permit.permitNumber} is unchanged.`,
   );
@@ -587,4 +604,253 @@ export function markNotificationRead(state: AppState, notificationId: string): T
   if (!notification) return fail("Mark read", "Notification not found.");
   notification.read = true;
   return { ok: true, label: "Notification read" };
+}
+
+/* ------------------------------------------------------------------ */
+/* Permit status actions (features.md §17)                             */
+/* ------------------------------------------------------------------ */
+
+function setPermitTerminal(
+  state: AppState,
+  permitId: string,
+  status: "REVOKED" | "EXPIRED",
+  label: string,
+  reason: string,
+): TransitionResult {
+  const permit = state.world.permits.find(
+    (item) => item.id === permitId || item.permitNumber === permitId,
+  );
+  if (!permit) return fail(label, "Permit not found.");
+  if (permit.status === "REVOKED" || permit.status === "EXPIRED") {
+    return fail(label, `Permit ${permit.permitNumber} is already ${permit.status}.`);
+  }
+  const previous = permit.status;
+  permit.status = status;
+  const app = state.world.applications.find(
+    (item) => item.reference === permit.applicationReference,
+  );
+  if (app) {
+    app.status = status;
+    app.history.push({
+      status,
+      at: state.clock.iso,
+      by: STORY_IDS.approver,
+      role: "approver",
+      note: reason,
+    });
+  }
+  addAudit(state, {
+    actor: STORY_IDS.approver,
+    role: "approver",
+    action: `${label} — ${permit.permitNumber}`,
+    status,
+    applicationReference: permit.applicationReference,
+    oldValue: previous,
+    newValue: status,
+  });
+  notify(state, "customer", "PERMIT", `Permit ${permit.permitNumber} is now ${status}.`);
+  return done(label, `Permit ${permit.permitNumber} ${status.toLowerCase()}.`, "info");
+}
+
+export function revokePermit(state: AppState, permitId: string, reason: string): TransitionResult {
+  return setPermitTerminal(
+    state,
+    permitId,
+    "REVOKED",
+    "Revoke permit",
+    reason || "Permit revoked.",
+  );
+}
+
+export function expirePermit(state: AppState, permitId: string): TransitionResult {
+  return setPermitTerminal(
+    state,
+    permitId,
+    "EXPIRED",
+    "Mark permit expired",
+    "Permit validity period ended.",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Document verification (features.md §8)                              */
+/* ------------------------------------------------------------------ */
+
+function findDocument(state: AppState, documentId: string) {
+  return state.world.documents.find((item) => item.id === documentId);
+}
+
+export function verifyDocument(
+  state: AppState,
+  documentId: string,
+  comment?: string,
+): TransitionResult {
+  const label = "Verify document";
+  const doc = findDocument(state, documentId);
+  if (!doc) return fail(label, "Document not found.");
+  doc.status = "VALID";
+  doc.verifiedBy = STORY_IDS.reviewer;
+  doc.reviewerComment = comment || "Document verified against the source.";
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: `Document verified — ${doc.name}`,
+    status: "VALID",
+    applicationReference: doc.reference,
+    oldValue: "PENDING VERIFICATION",
+    newValue: "VALID",
+  });
+  notify(state, "customer", "DOCUMENT", `${doc.name} was verified.`);
+  return done(label, `${doc.name} verified.`);
+}
+
+export function rejectDocument(
+  state: AppState,
+  documentId: string,
+  comment?: string,
+): TransitionResult {
+  const label = "Reject document";
+  const doc = findDocument(state, documentId);
+  if (!doc) return fail(label, "Document not found.");
+  doc.status = "REJECTED";
+  doc.verifiedBy = STORY_IDS.reviewer;
+  doc.reviewerComment = comment || "Document rejected; a replacement is required.";
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: `Document rejected — ${doc.name}`,
+    status: "REJECTED",
+    applicationReference: doc.reference,
+    oldValue: "PENDING VERIFICATION",
+    newValue: "REJECTED",
+  });
+  notify(state, "customer", "DOCUMENT", `${doc.name} was rejected. Please upload a replacement.`);
+  return done(label, `${doc.name} rejected.`, "info");
+}
+
+export function requestDocumentReplacement(
+  state: AppState,
+  documentId: string,
+  comment?: string,
+): TransitionResult {
+  const label = "Request replacement";
+  const doc = findDocument(state, documentId);
+  if (!doc) return fail(label, "Document not found.");
+  doc.status = "PENDING VERIFICATION";
+  doc.verifiedBy = STORY_IDS.reviewer;
+  doc.reviewerComment = comment || "Replacement requested.";
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: `Replacement requested — ${doc.name}`,
+    status: "PENDING VERIFICATION",
+    applicationReference: doc.reference,
+    oldValue: doc.status,
+    newValue: "PENDING VERIFICATION",
+  });
+  notify(state, "customer", "DOCUMENT", `Replacement requested for ${doc.name}.`);
+  return done(label, `Replacement requested for ${doc.name}.`, "info");
+}
+
+export function addDocumentObservation(
+  state: AppState,
+  documentId: string,
+  comment: string,
+): TransitionResult {
+  const label = "Add observation";
+  const doc = findDocument(state, documentId);
+  if (!doc) return fail(label, "Document not found.");
+  doc.reviewerComment = comment || doc.reviewerComment || "Observation recorded.";
+  doc.verifiedBy = STORY_IDS.reviewer;
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: `Observation added — ${doc.name}`,
+    status: doc.status,
+    applicationReference: doc.reference,
+    oldValue: null,
+    newValue: comment || "Observation",
+  });
+  return done(label, `Observation recorded on ${doc.name}.`, "info");
+}
+
+/* ------------------------------------------------------------------ */
+/* Agent management (features.md §3)                                   */
+/* ------------------------------------------------------------------ */
+
+function setAgentStatus(
+  state: AppState,
+  agentId: string,
+  status: "ACTIVE" | "SUSPENDED" | "EXPIRED",
+  label: string,
+): TransitionResult {
+  const agent = state.world.agents.find((item) => item.id === agentId);
+  if (!agent) return fail(label, "Agent not found.");
+  const previous = agent.status;
+  agent.status = status;
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: `${label} — ${agent.name}`,
+    status,
+    applicationReference: agent.id,
+    oldValue: previous,
+    newValue: status,
+  });
+  return done(label, `${agent.name} is now ${status.toLowerCase()}.`, "info");
+}
+
+export function suspendAgent(state: AppState, agentId: string): TransitionResult {
+  return setAgentStatus(state, agentId, "SUSPENDED", "Suspend agent");
+}
+
+export function reactivateAgent(state: AppState, agentId: string): TransitionResult {
+  return setAgentStatus(state, agentId, "ACTIVE", "Reactivate agent");
+}
+
+export function expireAgent(state: AppState, agentId: string): TransitionResult {
+  return setAgentStatus(state, agentId, "EXPIRED", "Expire agent authorization");
+}
+
+/* ------------------------------------------------------------------ */
+/* Operator payment (features.md §12)                                  */
+/* ------------------------------------------------------------------ */
+
+export function payApplication(
+  state: AppState,
+  applicationId: string,
+  method: "wallet" | "online",
+): TransitionResult {
+  const app = findApplication(state, applicationId);
+  const label = "Pay permit fees";
+  if (!app) return fail(label, "Application not found.");
+  if (app.finance.paymentStatus === "PAID") {
+    return fail(label, "These fees are already paid.");
+  }
+  const total = app.finance.permitFee + app.finance.processingFee;
+
+  if (method === "wallet") {
+    if (state.world.wallet.balance < total) {
+      return fail(label, "Insufficient wallet balance for this payment.");
+    }
+    state.world.wallet.balance -= total;
+    app.finance.paymentMethod = "Advance Deposit / Wallet";
+  } else {
+    app.finance.paymentMethod = "Online Payment";
+  }
+
+  app.finance.paymentStatus = "PAID";
+  app.finance.paidAt = state.clock.iso;
+  app.finance.outstanding = 0;
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: "Permit fees paid",
+    status: "PAID",
+    applicationReference: app.reference,
+    oldValue: "UNPAID",
+    newValue: "PAID",
+  });
+  notify(state, "finance", "PAYMENT", `Payment received for ${app.reference}.`);
+  return done(label, `Paid ${app.finance.currency} ${total} for ${app.reference}.`);
 }

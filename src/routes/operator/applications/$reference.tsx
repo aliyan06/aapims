@@ -12,6 +12,7 @@ import {
   SectionCard,
   Timeline,
   ValidationBadge,
+  type DescriptionItem,
   type TimelineStep,
 } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,52 @@ function ApplicationDetail() {
     application.documentIds.includes(document.id),
   );
 
+  const { flight, route } = application;
+  const { finance } = application;
+
+  const manifestItems: DescriptionItem[] = [];
+  if (flight.passengerManifest) {
+    manifestItems.push(
+      { label: "Passenger manifest", value: flight.passengerManifest },
+      { label: "Receiving party", value: flight.receivingParty ?? "—" },
+      { label: "Receiving party contact", value: flight.receivingPartyContact ?? "—" },
+    );
+  }
+  if (flight.cargoManifest) {
+    manifestItems.push(
+      { label: "Cargo manifest", value: flight.cargoManifest },
+      { label: "Shipper", value: flight.shipper ?? "—" },
+      { label: "Consignee", value: flight.consignee ?? "—" },
+      { label: "Air waybill", value: flight.airWaybill ?? "—" },
+    );
+  }
+
+  const routeItems: DescriptionItem[] = [
+    { label: "Origin", value: `${route.origin} (${route.originIcao})` },
+    { label: "Destination", value: `${route.destination} (${route.destinationIcao})` },
+    { label: "Entry point", value: route.entryPoint },
+    { label: "Exit point", value: route.exitPoint },
+    { label: "Departure (UTC)", value: formatDateTime(route.departureAt) },
+    { label: "Arrival (UTC)", value: formatDateTime(route.arrivalAt) },
+    {
+      label: "Estimated entry",
+      value: route.estimatedEntryAt ? formatDateTime(route.estimatedEntryAt) : "—",
+    },
+    {
+      label: "Estimated exit",
+      value: route.estimatedExitAt ? formatDateTime(route.estimatedExitAt) : "—",
+    },
+    { label: "Timezone", value: route.timezone },
+  ];
+  if (application.authorization === "LANDING") {
+    routeItems.push(
+      { label: "Departure slot", value: route.departureSlot ?? "—" },
+      { label: "Arrival slot", value: route.arrivalSlot ?? "—" },
+      { label: "Ground handling", value: route.groundHandlingAgent ?? "—" },
+      { label: "Purpose of visit", value: route.purposeOfVisit ?? "—" },
+    );
+  }
+
   return (
     <PortalPage
       title={application.reference}
@@ -175,36 +222,35 @@ function ApplicationDetail() {
                   { label: "Authorization", value: application.authorization },
                   { label: "Permit kind", value: application.permitKind },
                   { label: "Category", value: application.category },
-                  { label: "Flight number", value: application.flight.flightNumber },
-                  { label: "Call sign", value: application.flight.callSign },
-                  { label: "Passengers", value: application.flight.passengerCount },
-                  { label: "Cargo", value: application.flight.cargo },
-                  { label: "Purpose", value: application.flight.purpose, fullWidth: true },
+                  { label: "Flight number", value: flight.flightNumber },
+                  { label: "Call sign", value: flight.callSign },
+                  { label: "Passengers", value: flight.passengerCount },
+                  { label: "Cargo", value: flight.cargo },
+                  { label: "Purpose", value: flight.purpose, fullWidth: true },
+                  {
+                    label: "Special information",
+                    value: flight.specialInfo ?? "None recorded",
+                    fullWidth: true,
+                  },
                 ]}
               />
             </SectionCard>
 
+            <SectionCard
+              title="PAX / Cargo Manifest"
+              description="Manifest and receiving party detail for this flight."
+            >
+              {manifestItems.length > 0 ? (
+                <DescriptionList columns={3} items={manifestItems} />
+              ) : (
+                <p className="text-[13px] text-text-muted">
+                  No passenger or cargo manifest recorded for this application.
+                </p>
+              )}
+            </SectionCard>
+
             <SectionCard title="Route & Schedule" description="Authorised routing and time window.">
-              <DescriptionList
-                columns={3}
-                items={[
-                  {
-                    label: "Origin",
-                    value: `${application.route.origin} (${application.route.originIcao})`,
-                  },
-                  {
-                    label: "Destination",
-                    value: `${application.route.destination} (${application.route.destinationIcao})`,
-                  },
-                  { label: "Entry point", value: application.route.entryPoint },
-                  { label: "Exit point", value: application.route.exitPoint },
-                  {
-                    label: "Departure (UTC)",
-                    value: formatDateTime(application.route.departureAt),
-                  },
-                  { label: "Arrival (UTC)", value: formatDateTime(application.route.arrivalAt) },
-                ]}
-              />
+              <DescriptionList columns={3} items={routeItems} />
             </SectionCard>
 
             <SectionCard
@@ -248,37 +294,45 @@ function ApplicationDetail() {
 
             <SectionCard title="Finance" description="Fees and settlement status.">
               <div className="mb-4 flex items-center gap-2">
-                <PaymentBadge status={application.finance.paymentStatus} />
-                <ClearanceBadge status={application.finance.financialClearance} />
+                <PaymentBadge status={finance.paymentStatus} />
+                <ClearanceBadge status={finance.financialClearance} />
               </div>
               <DescriptionList
                 columns={3}
                 items={[
                   {
                     label: "Permit fee",
-                    value: `${application.finance.currency} ${application.finance.permitFee.toLocaleString()}`,
+                    value: `${finance.currency} ${finance.permitFee.toLocaleString()}`,
                   },
                   {
                     label: "Processing fee",
-                    value: `${application.finance.currency} ${application.finance.processingFee.toLocaleString()}`,
+                    value: `${finance.currency} ${finance.processingFee.toLocaleString()}`,
                   },
                   {
                     label: "Total",
-                    value: `${application.finance.currency} ${(
-                      application.finance.permitFee + application.finance.processingFee
+                    value: `${finance.currency} ${(
+                      finance.permitFee + finance.processingFee
                     ).toLocaleString()}`,
                   },
                   {
                     label: "Payment method",
-                    value: application.finance.paymentMethod ?? "Not selected",
+                    value: finance.paymentMethod ?? "Not selected",
                   },
                   {
                     label: "Paid at",
-                    value: application.finance.paidAt
-                      ? formatDateTime(application.finance.paidAt)
-                      : "—",
+                    value: finance.paidAt ? formatDateTime(finance.paidAt) : "—",
                   },
-                  { label: "Hold reason", value: application.finance.holdReason ?? "None" },
+                  { label: "Billing model", value: finance.billingModel },
+                  { label: "Invoice number", value: finance.invoiceNumber ?? "—" },
+                  {
+                    label: "Due date",
+                    value: finance.dueDate ? formatDate(finance.dueDate) : "—",
+                  },
+                  {
+                    label: "Outstanding",
+                    value: `${finance.currency} ${(finance.outstanding ?? 0).toLocaleString()}`,
+                  },
+                  { label: "Hold reason", value: finance.holdReason ?? "None" },
                 ]}
               />
             </SectionCard>

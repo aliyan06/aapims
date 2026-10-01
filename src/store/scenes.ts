@@ -28,7 +28,7 @@ export const SCENES: readonly ScenePreset[] = [
   {
     id: "scene-0",
     label: "0 · Operator signs in",
-    role: "operator",
+    role: "operatorAdmin",
     clock: "2026-10-10T09:00:00.000Z",
     route: "/operator/dashboard",
     apply: () => {},
@@ -36,7 +36,7 @@ export const SCENES: readonly ScenePreset[] = [
   {
     id: "scene-1",
     label: "1 · Operator dashboard",
-    role: "operator",
+    role: "operatorAdmin",
     clock: "2026-10-10T09:05:00.000Z",
     route: "/operator/dashboard",
     apply: () => {},
@@ -44,7 +44,7 @@ export const SCENES: readonly ScenePreset[] = [
   {
     id: "scene-2",
     label: "2 · Apply for permit",
-    role: "operator",
+    role: "operatorAdmin",
     clock: "2026-10-10T09:10:00.000Z",
     route: "/operator/apply",
     apply: () => {},
@@ -52,7 +52,7 @@ export const SCENES: readonly ScenePreset[] = [
   {
     id: "scene-3",
     label: "3 · Application submitted",
-    role: "operator",
+    role: "operatorAdmin",
     clock: "2026-10-10T09:20:00.000Z",
     route: `/operator/applications/${STORY_IDS.applicationReference}`,
     apply: (state) => {
@@ -128,7 +128,7 @@ export const SCENES: readonly ScenePreset[] = [
   {
     id: "scene-9",
     label: "9 · Revision requested",
-    role: "operator",
+    role: "operatorAdmin",
     clock: "2026-10-10T14:30:00.000Z",
     route: `/operator/permits/${STORY_IDS.permitNumber}`,
     apply: (state) => {

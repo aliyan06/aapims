@@ -9,7 +9,7 @@ function clone<T>(value: T): T {
 /** A fresh, mutable copy of the entire demo world. */
 export function buildInitialState(): AppState {
   return {
-    meta: { activeRole: "operator", currentScene: "scene-0" },
+    meta: { activeRole: "operatorAdmin", currentScene: "scene-0" },
     clock: { iso: DEMO_CLOCK_START },
     world: clone(WORLD),
     ui: { toasts: [], lastActionLabel: "Demo ready" },

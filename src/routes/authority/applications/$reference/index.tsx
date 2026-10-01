@@ -9,11 +9,18 @@ import {
   SectionCard,
 } from "@/components/desktop";
 import { ApplicationSections } from "@/components/authority/ApplicationSections";
+import { DocumentVerification } from "@/components/authority/DocumentVerification";
 import { Button } from "@/components/ui/button";
 import { useAppStore, useApplication } from "@/store";
 
+import { RequirePermission } from "@/components/shell/RequirePermission";
+
 export const Route = createFileRoute("/authority/applications/$reference/")({
-  component: ReviewerWorkspace,
+  component: () => (
+    <RequirePermission permission="app.review">
+      <ReviewerWorkspace />
+    </RequirePermission>
+  ),
 });
 
 const REVIEWER_CHECKS = [
@@ -141,6 +148,8 @@ function ReviewerWorkspace() {
           </SectionCard>
         </div>
       </div>
+
+      <DocumentVerification applicationId={application.id} />
 
       <Drawer
         open={confirmOpen}

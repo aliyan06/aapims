@@ -106,12 +106,18 @@ src/
 
 All accounts use the password **`demo123`**.
 
-| Email                    | Role            |
-| ------------------------ | --------------- |
-| `operator@demo.com`      | Operator        |
-| `reviewer@authority.gov` | Permit Reviewer |
-| `finance@authority.gov`  | Finance Officer |
-| `approver@authority.gov` | Permit Approver |
+| Email                      | Role            | Side      |
+| -------------------------- | --------------- | --------- |
+| `operator@demo.com`        | Operator Admin  | Customer  |
+| `permitofficer@demo.com`   | Permit Officer  | Customer  |
+| `operatorfinance@demo.com` | Finance Officer | Customer  |
+| `viewer@demo.com`          | Viewer          | Customer  |
+| `reviewer@authority.gov`   | Permit Reviewer | Authority |
+| `finance@authority.gov`    | Finance Officer | Authority |
+| `approver@authority.gov`   | Permit Approver | Authority |
+| `superadmin@authority.gov` | Super Admin     | Authority |
+
+Login is a mock email/password followed by an MFA/OTP step (demo code `123456`). Each role lands on its own dashboard, sees only its permitted navigation, and can only perform its permitted actions.
 
 ## Reading order / lifecycle
 

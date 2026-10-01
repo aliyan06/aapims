@@ -69,6 +69,24 @@ export type AppActions = {
   approveRevision: (revisionId: string) => boolean;
   rejectRevision: (revisionId: string) => boolean;
   markNotificationRead: (notificationId: string) => boolean;
+
+  /* Document verification */
+  verifyDocument: (documentId: string, comment?: string) => boolean;
+  rejectDocument: (documentId: string, comment?: string) => boolean;
+  requestDocumentReplacement: (documentId: string, comment?: string) => boolean;
+  addDocumentObservation: (documentId: string, comment: string) => boolean;
+
+  /* Agent management */
+  suspendAgent: (agentId: string) => boolean;
+  reactivateAgent: (agentId: string) => boolean;
+  expireAgent: (agentId: string) => boolean;
+
+  /* Operator payment */
+  payApplication: (applicationId: string, method: "wallet" | "online") => boolean;
+
+  /* Permit status */
+  revokePermit: (permitId: string, reason: string) => boolean;
+  expirePermit: (permitId: string) => boolean;
 };
 
 export type AppStore = AppState & AppActions;

@@ -1,84 +1,133 @@
-/**
- * Shell roles and demo-only navigation metadata.
- * AAPIMS is a desktop web system: every role renders in the same browser frame.
- * These are UI/demo configuration, not domain data (that lives in src/data).
- */
-
 import type { Role } from "@/data/types";
+import { isAuthorityRole, isCustomerRole } from "@/lib/rbac";
 
 export type { Role };
+export { isAuthorityRole, isCustomerRole };
 
-export const ROLES: readonly Role[] = ["operator", "reviewer", "finance", "approver", "public"];
+/**
+ * All login roles (authority + customer) plus the public verification surface.
+ * AAPIMS is desktop-only: every role renders in the same browser frame.
+ */
+export const ROLES: readonly Role[] = [
+  "operatorAdmin",
+  "permitOfficer",
+  "operatorFinance",
+  "viewer",
+  "reviewer",
+  "approver",
+  "finance",
+  "superadmin",
+  "public",
+];
 
 export const ROLE_LABEL: Record<Role, string> = {
-  operator: "Operator",
+  operatorAdmin: "Operator Admin",
+  permitOfficer: "Permit Officer",
+  operatorFinance: "Operator Finance",
+  viewer: "Viewer",
   reviewer: "Permit Reviewer",
-  finance: "Finance Officer",
   approver: "Permit Approver",
+  finance: "Finance Officer",
+  superadmin: "Super Admin",
   public: "Public Verification",
 };
 
 export const ROLE_SHORT_LABEL: Record<Role, string> = {
-  operator: "Operator",
+  operatorAdmin: "Operator",
+  permitOfficer: "Permit",
+  operatorFinance: "Finance",
+  viewer: "Viewer",
   reviewer: "Reviewer",
-  finance: "Finance",
   approver: "Approver",
+  finance: "Finance",
+  superadmin: "Admin",
   public: "Public",
 };
 
 /** AAPIMS is desktop-first; every role uses the desktop frame (one role, one surface). */
 export const ROLE_SURFACE: Record<Role, "desktop"> = {
-  operator: "desktop",
+  operatorAdmin: "desktop",
+  permitOfficer: "desktop",
+  operatorFinance: "desktop",
+  viewer: "desktop",
   reviewer: "desktop",
-  finance: "desktop",
   approver: "desktop",
+  finance: "desktop",
+  superadmin: "desktop",
   public: "desktop",
 };
 
 /** Entry point for "Start the story" and the presenter reset. */
 export const DEMO_START_ROUTE = "/login";
 
-/** Role root routes the presenter switcher navigates to. */
+/** Role root routes: each role lands on its own dashboard (features.md §1, prompt §24). */
 export const ROLE_HOME = {
-  operator: "/operator/dashboard",
-  reviewer: "/authority/applications",
-  finance: "/authority/finance",
-  approver: "/authority/approval",
+  operatorAdmin: "/operator/dashboard",
+  permitOfficer: "/operator/dashboard",
+  operatorFinance: "/operator/dashboard",
+  viewer: "/operator/dashboard",
+  reviewer: "/authority/dashboard",
+  approver: "/authority/dashboard",
+  finance: "/authority/dashboard",
+  superadmin: "/authority/dashboard",
   public: "/verify",
 } as const satisfies Record<Role, string>;
 
 /** Demo URL shown in the desktop browser frame per role. */
 export const ROLE_DESKTOP_URL: Record<Role, string> = {
-  operator: "aapims.gov.demo/operator",
-  reviewer: "aapims.gov.demo/authority/applications",
-  finance: "aapims.gov.demo/authority/finance",
-  approver: "aapims.gov.demo/authority/approval",
+  operatorAdmin: "aapims.gov.demo/operator",
+  permitOfficer: "aapims.gov.demo/operator",
+  operatorFinance: "aapims.gov.demo/operator",
+  viewer: "aapims.gov.demo/operator",
+  reviewer: "aapims.gov.demo/authority",
+  approver: "aapims.gov.demo/authority",
+  finance: "aapims.gov.demo/authority",
+  superadmin: "aapims.gov.demo/authority",
   public: "aapims.gov.demo/verify",
 };
 
-/** Which authority roles may act in the authority portal (permission model). */
-export type AuthorityRole = "reviewer" | "finance" | "approver";
-
-export function isAuthorityRole(role: Role): role is AuthorityRole {
-  return role === "reviewer" || role === "finance" || role === "approver";
-}
-
-/** Demo login accounts, matching the credentials in the specification. */
 export type DemoAccount = {
   role: Role;
   email: string;
   password: string;
   title: string;
   displayName: string;
+  side: "Authority Side" | "Customer Side";
 };
 
+/** Demo login accounts, matching the credentials in the specification. */
 export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   {
-    role: "operator",
+    role: "operatorAdmin",
     email: "operator@demo.com",
     password: "demo123",
     title: "Operator Admin",
     displayName: "Global Wings Aviation",
+    side: "Customer Side",
+  },
+  {
+    role: "permitOfficer",
+    email: "permitofficer@demo.com",
+    password: "demo123",
+    title: "Permit Officer",
+    displayName: "Global Wings Aviation",
+    side: "Customer Side",
+  },
+  {
+    role: "operatorFinance",
+    email: "operatorfinance@demo.com",
+    password: "demo123",
+    title: "Finance Officer",
+    displayName: "Global Wings Aviation",
+    side: "Customer Side",
+  },
+  {
+    role: "viewer",
+    email: "viewer@demo.com",
+    password: "demo123",
+    title: "Viewer",
+    displayName: "Global Wings Aviation",
+    side: "Customer Side",
   },
   {
     role: "reviewer",
@@ -86,6 +135,7 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
     password: "demo123",
     title: "Permit Reviewer",
     displayName: "Civil Aviation Authority",
+    side: "Authority Side",
   },
   {
     role: "finance",
@@ -93,6 +143,7 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
     password: "demo123",
     title: "Finance Officer",
     displayName: "Civil Aviation Authority",
+    side: "Authority Side",
   },
   {
     role: "approver",
@@ -100,6 +151,15 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
     password: "demo123",
     title: "Permit Approver",
     displayName: "Civil Aviation Authority",
+    side: "Authority Side",
+  },
+  {
+    role: "superadmin",
+    email: "superadmin@authority.gov",
+    password: "demo123",
+    title: "Super Admin",
+    displayName: "Civil Aviation Authority",
+    side: "Authority Side",
   },
 ];
 

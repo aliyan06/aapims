@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   BadgeCheck,
   Building2,
   CheckCircle2,
   CreditCard,
   FileCheck2,
+  Info,
+  Package,
   Plane,
   RefreshCw,
   Save,
   Upload,
+  Users,
   Wallet,
 } from "lucide-react";
 import {
@@ -27,6 +31,7 @@ import {
 } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,6 +43,7 @@ import {
   FLIGHT_CATEGORIES,
   PERMIT_AUTHORIZATIONS,
   PERMIT_KINDS,
+  SPECIAL_DOCUMENT_CATEGORIES,
   STORY_IDS,
   type FinancialClearance,
   type FlightCategory,
@@ -62,6 +68,7 @@ const STEPS = [
   "Operator & Aircraft",
   "Flight Category",
   "Flight Details",
+  "PAX / Cargo",
   "Route & Schedule",
   "Documents",
   "Validation",
@@ -81,6 +88,14 @@ type WizardForm = {
   passengerCount: string;
   cargo: string;
   purpose: string;
+  specialInfo: string;
+  passengerManifest: string;
+  receivingParty: string;
+  receivingPartyContact: string;
+  cargoManifest: string;
+  shipper: string;
+  consignee: string;
+  airWaybill: string;
   origin: string;
   originIcao: string;
   destination: string;
@@ -89,6 +104,12 @@ type WizardForm = {
   exitPoint: string;
   departureAt: string;
   arrivalAt: string;
+  estimatedEntryAt: string;
+  estimatedExitAt: string;
+  departureSlot: string;
+  arrivalSlot: string;
+  groundHandlingAgent: string;
+  purposeOfVisit: string;
   timezone: string;
 };
 
@@ -126,6 +147,14 @@ export function ApplyWizard() {
     passengerCount: String(application?.flight.passengerCount ?? 0),
     cargo: application?.flight.cargo ?? "",
     purpose: application?.flight.purpose ?? "",
+    specialInfo: application?.flight.specialInfo ?? "",
+    passengerManifest: application?.flight.passengerManifest ?? "",
+    receivingParty: application?.flight.receivingParty ?? "",
+    receivingPartyContact: application?.flight.receivingPartyContact ?? "",
+    cargoManifest: application?.flight.cargoManifest ?? "",
+    shipper: application?.flight.shipper ?? "",
+    consignee: application?.flight.consignee ?? "",
+    airWaybill: application?.flight.airWaybill ?? "",
     origin: application?.route.origin ?? "",
     originIcao: application?.route.originIcao ?? "",
     destination: application?.route.destination ?? "",
@@ -134,6 +163,12 @@ export function ApplyWizard() {
     exitPoint: application?.route.exitPoint ?? "",
     departureAt: application?.route.departureAt ?? "",
     arrivalAt: application?.route.arrivalAt ?? "",
+    estimatedEntryAt: application?.route.estimatedEntryAt ?? "",
+    estimatedExitAt: application?.route.estimatedExitAt ?? "",
+    departureSlot: application?.route.departureSlot ?? "",
+    arrivalSlot: application?.route.arrivalSlot ?? "",
+    groundHandlingAgent: application?.route.groundHandlingAgent ?? "",
+    purposeOfVisit: application?.route.purposeOfVisit ?? "",
     timezone: application?.route.timezone ?? "UTC",
   }));
 
@@ -156,6 +191,9 @@ export function ApplyWizard() {
   const heroAircraft =
     aircraftList.find((item) => item.id === form.aircraftId) ?? operatorAircraft[0];
   const applicationDocuments = documents.filter((doc) => application.documentIds.includes(doc.id));
+  const isCargo = form.category === "Cargo";
+  const isLanding = form.authorization === "LANDING";
+  const requiresSpecialDocuments = SPECIAL_DOCUMENT_CATEGORIES.includes(form.category);
   const permitFee = application.finance.permitFee;
   const processingFee = application.finance.processingFee;
   const currency = application.finance.currency;
@@ -173,7 +211,6 @@ export function ApplyWizard() {
       tone: "info",
     });
   };
-
   const handleSaveDraft = () => {
     pushToast({
       title: "Draft saved",
@@ -244,7 +281,7 @@ export function ApplyWizard() {
   return (
     <PortalPage
       title="Apply for a Permit"
-      description="Complete the eight-step application. Details are pre-filled from your verified operator profile and aircraft records."
+      description="Complete the guided application. Details are pre-filled from your verified operator profile and aircraft records."
       breadcrumb={[{ label: "Operator" }, { label: "Apply" }]}
     >
       <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
@@ -440,11 +477,113 @@ export function ApplyWizard() {
                     onChange={(e) => setField("purpose", e.target.value)}
                   />
                 </Field>
+                <Field
+                  label="Special information"
+                  className="sm:col-span-2"
+                  hint="Remarks the authority should consider — dangerous goods, medical cases, diplomatic status, or other special handling."
+                >
+                  <Textarea
+                    value={form.specialInfo}
+                    onChange={(e) => setField("specialInfo", e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Standard scheduled rotation; no special handling required."
+                  />
+                </Field>
               </div>
             </SectionCard>
           ) : null}
 
           {step === 4 ? (
+            <SectionCard
+              title="PAX / Cargo"
+              description="Nature-specific manifest detail collected for the selected flight category."
+              actions={
+                <span className="inline-flex items-center gap-2 rounded-full bg-info-soft px-3 py-1.5 text-[12px] font-bold text-text-dark">
+                  {isCargo ? <Package size={14} /> : <Users size={14} />}
+                  {isCargo ? "Cargo flight" : "Passenger flight"}
+                </span>
+              }
+            >
+              {isCargo ? (
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Cargo manifest" required>
+                      <Input
+                        value={form.cargoManifest}
+                        onChange={(e) => setField("cargoManifest", e.target.value)}
+                        placeholder="CGO-MAN-125-001"
+                      />
+                    </Field>
+                    <Field label="Air waybill" required>
+                      <Input
+                        value={form.airWaybill}
+                        onChange={(e) => setField("airWaybill", e.target.value)}
+                        placeholder="AWB-176-00125"
+                      />
+                    </Field>
+                    <Field label="Shipper / consignor" required>
+                      <Input
+                        value={form.shipper}
+                        onChange={(e) => setField("shipper", e.target.value)}
+                        placeholder="Gulf Freight Forwarders"
+                      />
+                    </Field>
+                    <Field label="Consignee" required>
+                      <Input
+                        value={form.consignee}
+                        onChange={(e) => setField("consignee", e.target.value)}
+                        placeholder="Nairobi Cargo Terminal"
+                      />
+                    </Field>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl border border-border-soft bg-surface-muted px-4 py-3">
+                    <Info size={16} className="mt-0.5 shrink-0 text-accent" />
+                    <p className="text-[12px] text-text-muted">
+                      Supporting documents — dangerous goods declarations, cargo security
+                      declarations and operator consignment notes — must accompany the air waybill
+                      and be uploaded against the cargo manifest before clearance.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Passenger manifest" required>
+                      <Input
+                        value={form.passengerManifest}
+                        onChange={(e) => setField("passengerManifest", e.target.value)}
+                        placeholder="PAX-MAN-125-001"
+                      />
+                    </Field>
+                    <Field label="Receiving party" required>
+                      <Input
+                        value={form.receivingParty}
+                        onChange={(e) => setField("receivingParty", e.target.value)}
+                        placeholder="Global Wings Ops Control"
+                      />
+                    </Field>
+                    <Field label="Receiving party contact" className="sm:col-span-2">
+                      <Input
+                        value={form.receivingPartyContact}
+                        onChange={(e) => setField("receivingPartyContact", e.target.value)}
+                        placeholder="+971 4 555 0125"
+                      />
+                    </Field>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl border border-border-soft bg-surface-muted px-4 py-3">
+                    <Info size={16} className="mt-0.5 shrink-0 text-accent" />
+                    <p className="text-[12px] text-text-muted">
+                      The passenger manifest and receiving party contact are used by the authority
+                      for border and handling coordination. Name changes after submission require a
+                      revision request.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+          ) : null}
+
+          {step === 5 ? (
             <SectionCard
               title="Route & Schedule"
               description="Departure, routing and the planned time window."
@@ -503,11 +642,72 @@ export function ApplyWizard() {
                     placeholder="2026-10-15T13:15:00.000Z"
                   />
                 </Field>
+                <Field label="Estimated entry (UTC)" hint="Overflight boundary entry time.">
+                  <Input
+                    value={form.estimatedEntryAt}
+                    onChange={(e) => setField("estimatedEntryAt", e.target.value)}
+                    placeholder="2026-10-15T10:45:00.000Z"
+                  />
+                </Field>
+                <Field label="Estimated exit (UTC)" hint="Overflight boundary exit time.">
+                  <Input
+                    value={form.estimatedExitAt}
+                    onChange={(e) => setField("estimatedExitAt", e.target.value)}
+                    placeholder="2026-10-15T11:30:00.000Z"
+                  />
+                </Field>
               </div>
+
+              {isLanding ? (
+                <div className="mt-5 space-y-4 border-t border-border-soft pt-5">
+                  <div className="flex items-center gap-2 text-[12px] font-bold text-text-dark">
+                    <Plane size={15} className="text-accent" /> Landing-specific details
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Departure slot" hint="Coordinated airport departure slot.">
+                      <Input
+                        value={form.departureSlot}
+                        onChange={(e) => setField("departureSlot", e.target.value)}
+                        placeholder="SLOT-OMDB-0815"
+                      />
+                    </Field>
+                    <Field label="Arrival slot" hint="Coordinated airport arrival slot.">
+                      <Input
+                        value={form.arrivalSlot}
+                        onChange={(e) => setField("arrivalSlot", e.target.value)}
+                        placeholder="SLOT-HKJK-1305"
+                      />
+                    </Field>
+                    <Field label="Ground handling agent">
+                      <Input
+                        value={form.groundHandlingAgent}
+                        onChange={(e) => setField("groundHandlingAgent", e.target.value)}
+                        placeholder="Pwani Ground Services"
+                      />
+                    </Field>
+                    <Field label="Purpose of visit">
+                      <Input
+                        value={form.purposeOfVisit}
+                        onChange={(e) => setField("purposeOfVisit", e.target.value)}
+                        placeholder="Scheduled passenger service"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 flex items-start gap-3 rounded-xl border border-border-soft bg-info-soft px-4 py-3">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0 text-status-awaiting" />
+                  <p className="text-[12px] text-text-muted">
+                    Overflight authorisation covers entry and exit of the flight information region
+                    only. Route validation confirms both boundary points fall on published air
+                    routes; no landing, slot or ground handling detail is required.
+                  </p>
+                </div>
+              )}
             </SectionCard>
           ) : null}
 
-          {step === 5 ? (
+          {step === 6 ? (
             <SectionCard
               title="Documents"
               description="Required documents are attached from your verified document centre."
@@ -545,10 +745,55 @@ export function ApplyWizard() {
                   </li>
                 ))}
               </ul>
+
+              {requiresSpecialDocuments ? (
+                <div className="mt-4 rounded-xl border border-status-awaiting/30 bg-warning-soft px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={18} className="mt-0.5 shrink-0 text-status-awaiting" />
+                    <div>
+                      <p className="text-[13px] font-bold text-text-dark">
+                        Additional documents required
+                      </p>
+                      <p className="mt-1 text-[12px] text-text-muted">
+                        The selected flight category &mdash; {form.category} &mdash; is classed as a
+                        special nature operation. Additional documents apply beyond the standard
+                        checklist and must be uploaded before the application can clear review:
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-text-muted">
+                        <li>Authority special-purpose authorisation or endorsement</li>
+                        <li>
+                          Category-specific declaration (medical, humanitarian, diplomatic or SAR)
+                        </li>
+                        <li>
+                          Supporting clearance from the relevant coordinating ministry or agency
+                        </li>
+                      </ul>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => handleUpload(`${form.category} additional documents`)}
+                      >
+                        <Upload size={14} /> Upload additional documents
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {isCargo ? (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-border-soft bg-surface-muted px-4 py-3">
+                  <Package size={16} className="mt-0.5 shrink-0 text-accent" />
+                  <p className="text-[12px] text-text-muted">
+                    Cargo flights must attach the air waybill, cargo manifest and, where applicable,
+                    a dangerous goods declaration before clearance.
+                  </p>
+                </div>
+              ) : null}
             </SectionCard>
           ) : null}
 
-          {step === 6 ? (
+          {step === 7 ? (
             <SectionCard
               title="Validation"
               description="Automated checks run against the operator, aircraft, route and documents."
@@ -590,7 +835,7 @@ export function ApplyWizard() {
             </SectionCard>
           ) : null}
 
-          {step === 7 ? (
+          {step === 8 ? (
             <SectionCard
               title="Payment"
               description="Settle the permit and processing fees to complete the application."
@@ -691,7 +936,7 @@ export function ApplyWizard() {
             </SectionCard>
           ) : null}
 
-          {step === 8 ? (
+          {step === 9 ? (
             <div className="space-y-5">
               <SectionCard title="Operator" description="Applicant on record.">
                 <DescriptionList
@@ -733,8 +978,42 @@ export function ApplyWizard() {
                     { label: "Passengers", value: form.passengerCount },
                     { label: "Cargo", value: form.cargo },
                     { label: "Purpose", value: form.purpose, fullWidth: true },
+                    {
+                      label: "Special information",
+                      value: form.specialInfo || "—",
+                      fullWidth: true,
+                    },
                   ]}
                 />
+              </SectionCard>
+
+              <SectionCard
+                title={isCargo ? "Cargo detail" : "PAX detail"}
+                description="Nature-specific manifest detail for this flight."
+              >
+                {isCargo ? (
+                  <DescriptionList
+                    columns={3}
+                    items={[
+                      { label: "Cargo manifest", value: form.cargoManifest || "—" },
+                      { label: "Air waybill", value: form.airWaybill || "—" },
+                      { label: "Shipper / consignor", value: form.shipper || "—" },
+                      { label: "Consignee", value: form.consignee || "—" },
+                    ]}
+                  />
+                ) : (
+                  <DescriptionList
+                    columns={3}
+                    items={[
+                      { label: "Passenger manifest", value: form.passengerManifest || "—" },
+                      { label: "Receiving party", value: form.receivingParty || "—" },
+                      {
+                        label: "Receiving party contact",
+                        value: form.receivingPartyContact || "—",
+                      },
+                    ]}
+                  />
+                )}
               </SectionCard>
 
               <SectionCard
@@ -753,6 +1032,25 @@ export function ApplyWizard() {
                     { label: "Exit point", value: form.exitPoint },
                     { label: "Departure (UTC)", value: formatDate(form.departureAt) },
                     { label: "Arrival (UTC)", value: formatDate(form.arrivalAt) },
+                    {
+                      label: "Estimated entry (UTC)",
+                      value: form.estimatedEntryAt ? formatDate(form.estimatedEntryAt) : "—",
+                    },
+                    {
+                      label: "Estimated exit (UTC)",
+                      value: form.estimatedExitAt ? formatDate(form.estimatedExitAt) : "—",
+                    },
+                    ...(isLanding
+                      ? [
+                          { label: "Departure slot", value: form.departureSlot || "—" },
+                          { label: "Arrival slot", value: form.arrivalSlot || "—" },
+                          {
+                            label: "Ground handling agent",
+                            value: form.groundHandlingAgent || "—",
+                          },
+                          { label: "Purpose of visit", value: form.purposeOfVisit || "—" },
+                        ]
+                      : []),
                   ]}
                 />
               </SectionCard>

@@ -9,8 +9,10 @@ A desktop POC for the **Aviation Authority Permit Integrated Management System**
 ## 2. Two portals + public verification
 
 - **Operator Portal** — registration, aircraft, documents, agents, permit application, payment, tracking, permits, revision.
-- **Authority Portal** — dashboard, applications, reviewer workspace, finance clearance, technical review, approval, issued permits, audit. Roles: **Permit Reviewer**, **Finance Officer**, **Permit Approver**.
+- **Authority Portal** — dashboard, applications, reviewer workspace, finance clearance, technical review, approval, issued permits, audit, search.
 - **Public QR Verification** — no login; verify a permit by number or application reference.
+
+**Roles (features.md §1).** Authority side: **Super Admin**, **Permit Reviewer**, **Permit Approver**, **Finance Officer**. Customer side: **Operator Admin**, **Permit Officer**, **Finance Officer**, **Viewer**. Each role lands on its own dashboard, sees only its permitted navigation, and can only perform its permitted actions (RBAC matrix in `src/lib/rbac.ts`, enforced by `PermissionGate`/`RequirePermission`). Login uses a mock email/password + MFA/OTP step; the presenter panel can switch role directly.
 
 ## 3. Reading order (how the story works)
 

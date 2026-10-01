@@ -27,7 +27,7 @@ type RoleCard = {
 
 const ROLE_CARDS: RoleCard[] = [
   {
-    role: "operator",
+    role: "operatorAdmin",
     label: "Operator Portal",
     description: "Register, manage aircraft and documents, apply for permits and track them.",
     surface: "Web portal",

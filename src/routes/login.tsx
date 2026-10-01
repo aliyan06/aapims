@@ -1,45 +1,65 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Lock, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
 import { AapimsBrand, MoavinLogo } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEMO_ACCOUNTS, ROLE_HOME, ROLE_LABEL } from "@/components/shell/roles";
+import { DEMO_ACCOUNTS, ROLE_HOME, ROLE_LABEL, type DemoAccount } from "@/components/shell/roles";
 import { useAppStore } from "@/store";
 
 export const Route = createFileRoute("/login")({
   component: LoginScreen,
 });
 
+const DEMO_OTP = "123456";
+type Step = "credentials" | "otp";
+
 function LoginScreen() {
   const navigate = useNavigate();
   const setActiveRole = useAppStore((s) => s.setActiveRole);
+  const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [pending, setPending] = useState<DemoAccount | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function signIn(nextEmail: string, nextPassword: string) {
+  function authenticate(nextEmail: string, nextPassword: string) {
     const account = DEMO_ACCOUNTS.find(
       (item) =>
         item.email.toLowerCase() === nextEmail.trim().toLowerCase() &&
         item.password === nextPassword,
     );
-
     if (!account) {
       setError("Those credentials do not match a demo account. Use one of the accounts below.");
       return;
     }
-
     setError(null);
-    setActiveRole(account.role);
-    void navigate({ to: ROLE_HOME[account.role] });
+    setPending(account);
+    setOtp("");
+    setStep("otp");
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    signIn(email, password);
+    authenticate(email, password);
   }
+
+  function verifyOtp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pending) return;
+    if (otp.trim() !== DEMO_OTP) {
+      setError(`Enter the 6-digit code (${DEMO_OTP} for this demo).`);
+      return;
+    }
+    setError(null);
+    setActiveRole(pending.role);
+    void navigate({ to: ROLE_HOME[pending.role] });
+  }
+
+  const authorityAccounts = DEMO_ACCOUNTS.filter((account) => account.side === "Authority Side");
+  const customerAccounts = DEMO_ACCOUNTS.filter((account) => account.side === "Customer Side");
 
   return (
     <div className="flex min-h-dvh w-full bg-background">
@@ -112,98 +132,180 @@ function LoginScreen() {
             <div className="lg:hidden">
               <AapimsBrand />
             </div>
-            <h2 className="mt-4 text-[22px] font-extrabold text-text-dark lg:mt-0">Sign in</h2>
-            <p className="mt-1 text-[13px] text-text-muted">
-              Access the Aviation Authority Permit Integrated Management System.
-            </p>
 
-            <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-text-dark">
-                  Email address
-                </Label>
-                <div className="relative">
-                  <Mail
-                    size={15}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-                  />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="username"
-                    placeholder="you@authority.gov"
-                    className="pl-9"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-text-dark">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock
-                    size={15}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-                  />
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    className="pl-9"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                </div>
-              </div>
-
-              {error ? (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-status-rejected/30 bg-status-rejected-soft px-3.5 py-2.5 text-[12px] font-semibold text-status-rejected"
-                >
-                  {error}
+            {step === "credentials" ? (
+              <>
+                <h2 className="mt-4 text-[22px] font-extrabold text-text-dark lg:mt-0">Sign in</h2>
+                <p className="mt-1 text-[13px] text-text-muted">
+                  Access the Aviation Authority Permit Integrated Management System.
                 </p>
-              ) : null}
 
-              <Button type="submit" className="w-full">
-                Sign In
-              </Button>
-            </form>
+                <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-text-dark">
+                      Email address
+                    </Label>
+                    <div className="relative">
+                      <Mail
+                        size={15}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
+                      />
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="username"
+                        placeholder="you@authority.gov"
+                        className="pl-9"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-text-dark">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock
+                        size={15}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
+                      />
+                      <Input
+                        id="password"
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        className="pl-9"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {error ? (
+                    <p
+                      role="alert"
+                      className="rounded-lg border border-status-rejected/30 bg-status-rejected-soft px-3.5 py-2.5 text-[12px] font-semibold text-status-rejected"
+                    >
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <Button type="submit" className="w-full">
+                    Continue
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="mt-4 flex items-center gap-2 lg:mt-0">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-info-soft text-accent">
+                    <KeyRound size={17} />
+                  </span>
+                  <div>
+                    <h2 className="text-[18px] font-extrabold text-text-dark">
+                      Verify your identity
+                    </h2>
+                    <p className="text-[12px] text-text-muted">
+                      {pending ? `A one-time code was sent to ${pending.email}.` : null}
+                    </p>
+                  </div>
+                </div>
+
+                <form className="mt-6 space-y-4" onSubmit={verifyOtp}>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="otp" className="text-text-dark">
+                      One-time code (MFA)
+                    </Label>
+                    <Input
+                      id="otp"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      className="pl-3 text-center text-[20px] font-bold tracking-[0.5em]"
+                      value={otp}
+                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
+                    />
+                    <p className="text-[11px] text-text-subtle">
+                      Demo code: <span className="font-bold">{DEMO_OTP}</span>
+                    </p>
+                  </div>
+
+                  {error ? (
+                    <p
+                      role="alert"
+                      className="rounded-lg border border-status-rejected/30 bg-status-rejected-soft px-3.5 py-2.5 text-[12px] font-semibold text-status-rejected"
+                    >
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setStep("credentials");
+                        setPending(null);
+                        setError(null);
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" className="flex-1">
+                      Verify &amp; Sign In
+                    </Button>
+                  </div>
+                </form>
+              </>
+            )}
 
             <div className="mt-7 border-t border-border-soft pt-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-[12px] font-bold uppercase tracking-wide text-text-muted">
                   Demo access
                 </h3>
-                <span className="text-[11px] text-text-subtle">Select an account to sign in</span>
+                <span className="text-[11px] text-text-subtle">Password {`demo123`}</span>
               </div>
 
-              <div className="mt-3 space-y-2">
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.role}
-                    type="button"
-                    onClick={() => signIn(account.email, account.password)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-muted/40 px-3.5 py-2.5 text-left transition-colors hover:border-accent/50 hover:bg-info-soft/50"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-[13px] font-bold text-text-dark">
-                        {ROLE_LABEL[account.role]}
-                      </div>
-                      <div className="truncate text-[11px] text-text-muted">
-                        {account.displayName} · {account.email}
-                      </div>
-                    </div>
-                    <span className="shrink-0 rounded-md bg-surface px-2 py-0.5 text-[11px] font-semibold text-text-subtle">
-                      {account.password}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {[
+                { label: "Authority Side", accounts: authorityAccounts },
+                { label: "Customer Side", accounts: customerAccounts },
+              ].map((group) => (
+                <div key={group.label} className="mt-4">
+                  <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">
+                    {group.label}
+                  </div>
+                  <div className="space-y-2">
+                    {group.accounts.map((account) => (
+                      <button
+                        key={account.role}
+                        type="button"
+                        onClick={() => {
+                          setEmail(account.email);
+                          setPassword(account.password);
+                          authenticate(account.email, account.password);
+                        }}
+                        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-muted/40 px-3.5 py-2.5 text-left transition-colors hover:border-accent/50 hover:bg-info-soft/50"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-bold text-text-dark">
+                            {ROLE_LABEL[account.role]}
+                          </div>
+                          <div className="truncate text-[11px] text-text-muted">
+                            {account.displayName} · {account.email}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-semibold text-text-subtle">
+                          Use
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -1,6 +1,6 @@
-import { BadgeCheck, Download, Printer, ScanLine, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Download, Mail, Printer, ScanLine, ShieldCheck } from "lucide-react";
 import type { PermitRecord } from "@/data/types";
-import { getAircraft, operatorName } from "@/data/lookups";
+import { getAgent, getAircraft, operatorName } from "@/data/lookups";
 import { formatDate, useAuthority, useWorld } from "@/store";
 import { QRVisual } from "./QRVisual";
 
@@ -9,6 +9,7 @@ type DigitalPermitProps = {
   onVerify?: () => void;
   onDownload?: () => void;
   onPrint?: () => void;
+  onEmail?: () => void;
 };
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -23,11 +24,18 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /** Official-style mock digital permit document. */
-export function DigitalPermit({ permit, onVerify, onDownload, onPrint }: DigitalPermitProps) {
+export function DigitalPermit({
+  permit,
+  onVerify,
+  onDownload,
+  onPrint,
+  onEmail,
+}: DigitalPermitProps) {
   const world = useWorld();
   const authority = useAuthority();
   const aircraft = getAircraft(world, permit.aircraftId);
   const operator = operatorName(world, permit.operatorId);
+  const agent = getAgent(world, permit.agentId ?? null);
   const title =
     permit.authorization === "OVERFLIGHT" ? "DIGITAL OVERFLIGHT PERMIT" : "DIGITAL LANDING PERMIT";
 
@@ -66,6 +74,9 @@ export function DigitalPermit({ permit, onVerify, onDownload, onPrint }: Digital
             <Row label="Permit Number" value={permit.permitNumber} />
             <Row label="Application Reference" value={permit.applicationReference} />
             <Row label="Operator" value={operator} />
+            {agent ? (
+              <Row label="Agent" value={`${agent.name} · LoA ${agent.loaReference}`} />
+            ) : null}
             <Row label="Aircraft" value={`${aircraft.registration} · ${aircraft.type}`} />
             <Row label="Flight" value={permit.flightNumber} />
             <Row label="Route" value={permit.routeLabel} />
@@ -136,6 +147,15 @@ export function DigitalPermit({ permit, onVerify, onDownload, onPrint }: Digital
             className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3.5 py-2 text-[12px] font-semibold text-text-dark transition-colors hover:bg-surface-muted"
           >
             <Printer size={15} /> Print
+          </button>
+        ) : null}
+        {onEmail ? (
+          <button
+            type="button"
+            onClick={onEmail}
+            className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3.5 py-2 text-[12px] font-semibold text-text-dark transition-colors hover:bg-surface-muted"
+          >
+            <Mail size={15} /> Email
           </button>
         ) : null}
         {onVerify ? (

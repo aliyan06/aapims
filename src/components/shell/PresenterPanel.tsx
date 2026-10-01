@@ -7,8 +7,12 @@ import {
   ChevronRight,
   ClipboardCheck,
   Clock3,
+  CreditCard,
+  Eye,
+  FileText,
   RotateCcw,
   ScanLine,
+  ShieldCheck,
   Wallet,
 } from "lucide-react";
 import {
@@ -22,10 +26,14 @@ import { formatClock, useAppStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 const ROLE_ICON: Record<Role, ComponentType<{ size?: number; className?: string }>> = {
-  operator: Building2,
+  operatorAdmin: Building2,
+  permitOfficer: FileText,
+  operatorFinance: CreditCard,
+  viewer: Eye,
   reviewer: ClipboardCheck,
   finance: Wallet,
   approver: BadgeCheck,
+  superadmin: ShieldCheck,
   public: ScanLine,
 };
 

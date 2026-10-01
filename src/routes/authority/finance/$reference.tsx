@@ -1,15 +1,25 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CheckCircle2, FileWarning, Info, PauseCircle, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardCheck,
+  FileWarning,
+  Info,
+  PauseCircle,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
 import {
   ActionBar,
   ApplicationStatusBadge,
+  Checklist,
   ClearanceBadge,
   DescriptionList,
   EmptyState,
   PaymentBadge,
   PortalPage,
   SectionCard,
+  type ChecklistItem,
 } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +30,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { getAircraft, operatorName } from "@/data/lookups";
-import { formatDateTime, useApplication, useAppStore, useWorld } from "@/store";
+import { Textarea } from "@/components/ui/textarea";
+import { getAircraft, operatorName } from "@/data";
+import {
+  formatDate,
+  formatDateTime,
+  useApplication,
+  useAppStore,
+  usePermission,
+  useWallet,
+  useWorld,
+} from "@/store";
 
 export const Route = createFileRoute("/authority/finance/$reference")({
   component: FinanceDetail,
@@ -34,11 +52,15 @@ function FinanceDetail() {
   const { reference } = Route.useParams();
   const navigate = useNavigate();
   const world = useWorld();
+  const wallet = useWallet();
   const application = useApplication(reference);
 
   const verifyPayment = useAppStore((s) => s.verifyPayment);
   const placeFinancialHold = useAppStore((s) => s.placeFinancialHold);
   const clearFinancialHold = useAppStore((s) => s.clearFinancialHold);
+
+  const canVerify = usePermission("finance.verify");
+  const canHold = usePermission("finance.hold");
 
   const [holdOpen, setHoldOpen] = useState(false);
   const [holdReason, setHoldReason] = useState(DEFAULT_HOLD_REASON);
@@ -63,10 +85,43 @@ function FinanceDetail() {
     );
   }
 
+  const finance = application.finance;
   const isAwaitingFinance = application.status === "AWAITING FINANCE";
-  const isPaid = application.finance.paymentStatus === "PAID";
-  const total = application.finance.permitFee + application.finance.processingFee;
+  const isPaid = finance.paymentStatus === "PAID";
+  const isPostpaid = finance.billingModel === "Postpaid";
+  const total = finance.permitFee + finance.processingFee;
+  const outstanding = finance.outstanding ?? 0;
+  const hasOutstanding = outstanding > 0;
+  const hasHold = finance.financialClearance === "ON HOLD";
+  const balanceSufficient = wallet.balance >= total;
   const aircraft = getAircraft(world, application.aircraftId);
+
+  const eligibility: ChecklistItem[] = [
+    {
+      id: "balance",
+      label: "Wallet / advance balance sufficient",
+      detail: `${finance.currency} ${wallet.balance.toLocaleString()} available against ${finance.currency} ${total.toLocaleString()} due.`,
+      outcome: balanceSufficient ? "PASS" : "WARNING",
+    },
+    {
+      id: "payment",
+      label: "Payment received",
+      detail: isPaid
+        ? `Payment verified${finance.paidAt ? ` on ${formatDateTime(finance.paidAt)}` : ""}.`
+        : "No verified payment on record for this application.",
+      outcome: isPaid ? "PASS" : "WARNING",
+    },
+    {
+      id: "hold",
+      label: "No outstanding hold",
+      detail: hasHold
+        ? (finance.holdReason ?? "A financial hold is active.")
+        : hasOutstanding
+          ? `${finance.currency} ${outstanding.toLocaleString()} outstanding on ${finance.invoiceNumber ?? "the invoice"}.`
+          : "No financial hold or outstanding balance on record.",
+      outcome: !hasHold && !hasOutstanding ? "PASS" : "WARNING",
+    },
+  ];
 
   function onConfirmHold() {
     if (!application) return;
@@ -103,62 +158,115 @@ function FinanceDetail() {
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-          <SectionCard title="Application" description="Applicant and aircraft on record.">
-            <DescriptionList
-              columns={2}
-              items={[
-                { label: "Application", value: application.reference },
-                { label: "Operator", value: operatorName(world, application.operatorId) },
-                {
-                  label: "Aircraft",
-                  value: `${aircraft.registration} · ${aircraft.type}`,
-                },
-                { label: "Authorization", value: application.authorization },
-                { label: "Permit kind", value: application.permitKind },
-                { label: "Category", value: application.category },
-                {
-                  label: "Route",
-                  value: `${application.route.origin} (${application.route.originIcao}) → ${application.route.destination} (${application.route.destinationIcao})`,
-                  fullWidth: true,
-                },
-              ]}
-            />
-          </SectionCard>
+          <div className="space-y-5">
+            <SectionCard title="Application" description="Applicant and aircraft on record.">
+              <DescriptionList
+                columns={2}
+                items={[
+                  { label: "Application", value: application.reference },
+                  { label: "Operator", value: operatorName(world, application.operatorId) },
+                  {
+                    label: "Aircraft",
+                    value: `${aircraft.registration} · ${aircraft.type}`,
+                  },
+                  { label: "Authorization", value: application.authorization },
+                  { label: "Permit kind", value: application.permitKind },
+                  { label: "Category", value: application.category },
+                  {
+                    label: "Route",
+                    value: `${application.route.origin} (${application.route.originIcao}) → ${application.route.destination} (${application.route.destinationIcao})`,
+                    fullWidth: true,
+                  },
+                ]}
+              />
+            </SectionCard>
 
-          <SectionCard title="Financial clearance" description="Fees, payment and clearance state.">
-            <div className="mb-4 flex items-center gap-2">
-              <PaymentBadge status={application.finance.paymentStatus} />
-              <ClearanceBadge status={application.finance.financialClearance} />
-            </div>
-            <DescriptionList
-              columns={1}
-              items={[
-                {
-                  label: "Permit fee",
-                  value: `${application.finance.currency} ${application.finance.permitFee.toLocaleString()}`,
-                },
-                {
-                  label: "Processing fee",
-                  value: `${application.finance.currency} ${application.finance.processingFee.toLocaleString()}`,
-                },
-                {
-                  label: "Total",
-                  value: `${application.finance.currency} ${total.toLocaleString()}`,
-                },
-                {
-                  label: "Payment method",
-                  value: application.finance.paymentMethod ?? "Not selected",
-                },
-                {
-                  label: "Paid at",
-                  value: application.finance.paidAt
-                    ? formatDateTime(application.finance.paidAt)
-                    : "—",
-                },
-                { label: "Hold reason", value: application.finance.holdReason ?? "None" },
-              ]}
-            />
-          </SectionCard>
+            <SectionCard
+              title="Financial summary"
+              description="Fees, billing model and the current payment state."
+            >
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <PaymentBadge status={finance.paymentStatus} />
+                <ClearanceBadge status={finance.financialClearance} />
+              </div>
+              <DescriptionList
+                columns={2}
+                items={[
+                  {
+                    label: "Permit fee",
+                    value: `${finance.currency} ${finance.permitFee.toLocaleString()}`,
+                  },
+                  {
+                    label: "Processing fee",
+                    value: `${finance.currency} ${finance.processingFee.toLocaleString()}`,
+                  },
+                  {
+                    label: "Total",
+                    value: `${finance.currency} ${total.toLocaleString()}`,
+                  },
+                  { label: "Billing model", value: finance.billingModel },
+                  { label: "Payment method", value: finance.paymentMethod ?? "Not selected" },
+                  {
+                    label: "Paid at",
+                    value: finance.paidAt ? formatDateTime(finance.paidAt) : "—",
+                  },
+                  ...(isPostpaid
+                    ? [
+                        { label: "Invoice number", value: finance.invoiceNumber ?? "—" },
+                        {
+                          label: "Due date",
+                          value: finance.dueDate ? formatDate(finance.dueDate) : "—",
+                        },
+                        {
+                          label: "Outstanding",
+                          value: `${finance.currency} ${outstanding.toLocaleString()}`,
+                        },
+                      ]
+                    : []),
+                  { label: "Hold reason", value: finance.holdReason ?? "None" },
+                ]}
+              />
+            </SectionCard>
+          </div>
+
+          <div className="space-y-5">
+            <SectionCard
+              title="Wallet / advance balance"
+              description="Operator funds held against authority fees."
+            >
+              <div className="mb-4 flex items-center gap-2 text-accent">
+                <Wallet size={16} />
+                <span className="text-[12px] font-semibold uppercase tracking-wide">
+                  Prepaid account
+                </span>
+              </div>
+              <DescriptionList
+                columns={1}
+                items={[
+                  {
+                    label: "Available balance",
+                    value: `${wallet.currency} ${wallet.balance.toLocaleString()}`,
+                  },
+                  {
+                    label: "Outstanding",
+                    value: `${wallet.currency} ${wallet.outstanding.toLocaleString()}`,
+                  },
+                  {
+                    label: "Billing model",
+                    value: finance.billingModel,
+                  },
+                ]}
+              />
+            </SectionCard>
+
+            <SectionCard
+              title="Financial eligibility"
+              description="Automated checks against the wallet and application."
+              actions={<ClipboardCheck size={16} className="text-accent" />}
+            >
+              <Checklist items={eligibility} />
+            </SectionCard>
+          </div>
         </div>
       </div>
 
@@ -168,15 +276,26 @@ function FinanceDetail() {
           Finance Officer actions
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" disabled={isPaid} onClick={() => verifyPayment(application.id)}>
+          <Button
+            variant="outline"
+            disabled={isPaid || !canVerify}
+            onClick={() => verifyPayment(application.id)}
+          >
             <CheckCircle2 size={15} />
             {isPaid ? "Payment Verified" : "Verify Payment"}
           </Button>
-          <Button variant="outline" disabled={!isAwaitingFinance} onClick={() => setHoldOpen(true)}>
+          <Button
+            variant="outline"
+            disabled={!isAwaitingFinance || !canHold}
+            onClick={() => setHoldOpen(true)}
+          >
             <PauseCircle size={15} />
             Place Financial Hold
           </Button>
-          <Button disabled={!isAwaitingFinance} onClick={() => clearFinancialHold(application.id)}>
+          <Button
+            disabled={!isAwaitingFinance || !canHold}
+            onClick={() => clearFinancialHold(application.id)}
+          >
             <ShieldCheck size={15} />
             Clear Financial Hold
           </Button>
@@ -191,8 +310,9 @@ function FinanceDetail() {
               Provide a reason for holding {application.reference}. The operator will be notified.
             </DialogDescription>
           </DialogHeader>
-          <Input
+          <Textarea
             value={holdReason}
+            rows={3}
             onChange={(event) => setHoldReason(event.target.value)}
             placeholder={DEFAULT_HOLD_REASON}
           />

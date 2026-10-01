@@ -357,6 +357,18 @@ const heroChecks: ValidationCheck[] = [
     outcome: "PASS",
     detail: "Departure and arrival times complete.",
   },
+  {
+    id: "chk-duplicate",
+    label: "Duplicate application check",
+    outcome: "PASS",
+    detail: "No overlapping application for this flight and date.",
+  },
+  {
+    id: "chk-financial",
+    label: "Financial eligibility check",
+    outcome: "PASS",
+    detail: "Wallet balance covers the permit fees.",
+  },
 ];
 
 function allPassChecks(): ValidationCheck[] {
@@ -373,6 +385,10 @@ function defaultFinance(total = 550): FinanceDetails {
     paymentMethod: total === 0 ? null : "Advance Deposit / Wallet",
     paidAt: total === 0 ? null : "2026-10-10T08:55:00.000Z",
     holdReason: null,
+    billingModel: "Prepaid / Advance Deposit",
+    invoiceNumber: total === 0 ? undefined : "INV-2026-00125",
+    dueDate: undefined,
+    outstanding: 0,
   };
 }
 
@@ -396,6 +412,8 @@ type ApplicationInput = {
   agentId?: string | null;
   financialClearance?: FinanceDetails["financialClearance"];
   permitId?: string | null;
+  validation?: ValidationCheck[];
+  validationResult?: ApplicationRecord["validationResult"];
 };
 
 function buildApplication(input: ApplicationInput): ApplicationRecord {
@@ -415,6 +433,14 @@ function buildApplication(input: ApplicationInput): ApplicationRecord {
       passengerCount: input.category === "Cargo" ? 0 : 142,
       cargo: input.category === "Cargo" ? "General Cargo" : "Checked baggage",
       purpose: input.category === "Cargo" ? "Cargo flight" : "Commercial Flight",
+      specialInfo: "Standard scheduled rotation; no special handling required.",
+      passengerManifest: input.category === "Cargo" ? undefined : "PAX-MAN-125-001",
+      receivingParty: "Global Wings Ops Control",
+      receivingPartyContact: "+971 4 555 0125",
+      cargoManifest: input.category === "Cargo" ? "CGO-MAN-125-001" : undefined,
+      shipper: input.category === "Cargo" ? "Gulf Freight Forwarders" : undefined,
+      consignee: input.category === "Cargo" ? "Nairobi Cargo Terminal" : undefined,
+      airWaybill: input.category === "Cargo" ? "AWB-176-00125" : undefined,
     },
     route: {
       origin: origin ?? "Dubai International Airport",
@@ -426,6 +452,12 @@ function buildApplication(input: ApplicationInput): ApplicationRecord {
       departureAt: "2026-10-15T08:30:00.000Z",
       arrivalAt: "2026-10-15T13:15:00.000Z",
       timezone: "UTC",
+      estimatedEntryAt: "2026-10-15T10:45:00.000Z",
+      estimatedExitAt: "2026-10-15T11:30:00.000Z",
+      departureSlot: "SLOT-OMDB-0815",
+      arrivalSlot: "SLOT-HKJK-1305",
+      groundHandlingAgent: "Pwani Ground Services",
+      purposeOfVisit: "Scheduled passenger service",
     },
     documentIds: [
       "doc-gwa-company",
@@ -437,8 +469,8 @@ function buildApplication(input: ApplicationInput): ApplicationRecord {
       "doc-gwa-coaw",
       "doc-gwa-flight",
     ],
-    validation: allPassChecks(),
-    validationResult: "PASS",
+    validation: input.validation ?? allPassChecks(),
+    validationResult: input.validationResult ?? "PASS",
     finance: {
       ...defaultFinance(),
       financialClearance: input.financialClearance ?? "PENDING CLEARANCE",
@@ -453,7 +485,7 @@ function buildApplication(input: ApplicationInput): ApplicationRecord {
         status: "DRAFT",
         at: input.createdAt,
         by: STORY_IDS.operatorActor,
-        role: "operator",
+        role: "operatorAdmin",
         note: "Application created.",
       },
       ...(input.submittedAt
@@ -462,7 +494,7 @@ function buildApplication(input: ApplicationInput): ApplicationRecord {
               status: "SUBMITTED" as const,
               at: input.submittedAt,
               by: STORY_IDS.operatorActor,
-              role: "operator" as const,
+              role: "operatorAdmin" as const,
               note: "Application submitted for review.",
             },
           ]
@@ -589,6 +621,75 @@ export const applications: ApplicationRecord[] = [
     createdAt: "2026-10-06T12:00:00.000Z",
     submittedAt: "2026-10-06T12:25:00.000Z",
   }),
+  // A blocked application: demonstrates WARNING / BLOCKER validation results.
+  buildApplication({
+    id: "app-aap-2026-00126",
+    reference: "AAP-2026-00126",
+    operatorId: "op-savanna-air",
+    aircraftId: "ac-5y-sac",
+    flightNumber: "SA221",
+    callSign: "SAV221",
+    routeLabel: "Nairobi (HKJK) → Lilongwe (FWKI)",
+    originIcao: "HKJK",
+    destinationIcao: "FWKI",
+    status: "RETURNED",
+    createdAt: "2026-10-09T06:40:00.000Z",
+    submittedAt: "2026-10-09T07:05:00.000Z",
+    validation: [
+      { id: "blk-op", label: "Operator verified", outcome: "PASS", detail: "SAC-014 is active." },
+      { id: "blk-aoc", label: "AOC valid", outcome: "PASS", detail: "AOC-KE-11208 valid." },
+      {
+        id: "blk-aircraft",
+        label: "Aircraft valid",
+        outcome: "PASS",
+        detail: "5Y-SAC is registered.",
+      },
+      {
+        id: "blk-insurance",
+        label: "Insurance valid",
+        outcome: "BLOCKER",
+        detail: "Insurance certificate INS-KE-55231 expires 20 Nov 2026 and is not yet renewed.",
+      },
+      {
+        id: "blk-docs",
+        label: "Required documents available",
+        outcome: "WARNING",
+        detail: "Flight-specific documents pending verification.",
+      },
+      { id: "blk-route", label: "Route complete", outcome: "PASS", detail: "Route provided." },
+      {
+        id: "blk-entry",
+        label: "Entry point provided",
+        outcome: "PASS",
+        detail: "POINT-A confirmed.",
+      },
+      {
+        id: "blk-exit",
+        label: "Exit point provided",
+        outcome: "PASS",
+        detail: "POINT-B confirmed.",
+      },
+      {
+        id: "blk-schedule",
+        label: "Schedule complete",
+        outcome: "PASS",
+        detail: "Schedule complete.",
+      },
+      {
+        id: "blk-duplicate",
+        label: "Duplicate application check",
+        outcome: "PASS",
+        detail: "No duplicate found.",
+      },
+      {
+        id: "blk-financial",
+        label: "Financial eligibility check",
+        outcome: "WARNING",
+        detail: "Outstanding balance on the operator account.",
+      },
+    ],
+    validationResult: "BLOCKER",
+  }),
 ];
 
 export const permits: PermitRecord[] = [
@@ -622,7 +723,7 @@ export const audit: AuditEntry[] = [
     id: "aud-001",
     at: "2026-10-05T08:10:00.000Z",
     actor: "Atlas Cargo Airlines",
-    role: "operator",
+    role: "operatorAdmin",
     action: "Application submitted",
     status: "SUBMITTED",
     applicationReference: "AAP-2026-00123",
@@ -689,7 +790,7 @@ export const audit: AuditEntry[] = [
 export const notifications: NotificationRecord[] = [
   {
     id: "ntf-001",
-    targetRole: "operator",
+    targetRole: "customer",
     type: "DOCUMENT",
     text: "Insurance certificate for 5Y-SAC is expiring soon.",
     time: "2026-10-09T07:30:00.000Z",
@@ -697,7 +798,7 @@ export const notifications: NotificationRecord[] = [
   },
   {
     id: "ntf-002",
-    targetRole: "operator",
+    targetRole: "customer",
     type: "APPLICATION",
     text: "Application AAP-2026-00124 was returned for correction.",
     time: "2026-10-06T13:00:00.000Z",
@@ -784,17 +885,91 @@ export const rbacRoles: RbacRole[] = [
 ];
 
 export const rbacPermissions: RbacPermission[] = [
-  { key: "app.create", label: "Create application", roles: ["operator"] },
-  { key: "app.submit", label: "Submit application", roles: ["operator"] },
-  { key: "app.review", label: "Review application", roles: ["reviewer"] },
-  { key: "app.recommend", label: "Recommend approval", roles: ["reviewer"] },
-  { key: "finance.clear", label: "Clear financial hold", roles: ["finance"] },
-  { key: "tech.review", label: "Pass technical review", roles: ["reviewer"] },
-  { key: "permit.approve", label: "Approve permit", roles: ["approver"] },
-  { key: "permit.issue", label: "Issue digital permit", roles: ["approver"] },
-  { key: "permit.revise", label: "Request revision", roles: ["operator"] },
-  { key: "permit.revise.approve", label: "Approve revision", roles: ["approver"] },
-  { key: "audit.view", label: "View audit trail", roles: ["reviewer", "finance", "approver"] },
+  {
+    key: "app.create",
+    label: "Create application",
+    roles: ["operatorAdmin", "permitOfficer"],
+  },
+  {
+    key: "app.submit",
+    label: "Submit application",
+    roles: ["operatorAdmin", "permitOfficer"],
+  },
+  {
+    key: "app.view",
+    label: "View applications",
+    roles: [
+      "operatorAdmin",
+      "permitOfficer",
+      "operatorFinance",
+      "viewer",
+      "reviewer",
+      "finance",
+      "approver",
+      "superadmin",
+    ],
+  },
+  { key: "app.review", label: "Review application", roles: ["reviewer", "superadmin"] },
+  { key: "app.recommend", label: "Recommend approval", roles: ["reviewer", "superadmin"] },
+  {
+    key: "app.return",
+    label: "Return / request information",
+    roles: ["reviewer", "superadmin"],
+  },
+  {
+    key: "doc.manage",
+    label: "Upload / replace documents",
+    roles: ["operatorAdmin", "permitOfficer"],
+  },
+  { key: "doc.verify", label: "Verify documents", roles: ["reviewer", "superadmin"] },
+  { key: "tech.review", label: "Perform technical review", roles: ["reviewer", "superadmin"] },
+  { key: "finance.verify", label: "Verify payment", roles: ["finance", "superadmin"] },
+  { key: "finance.hold", label: "Place / clear financial hold", roles: ["finance", "superadmin"] },
+  {
+    key: "payment.manage",
+    label: "Manage payments and wallet",
+    roles: ["operatorAdmin", "operatorFinance"],
+  },
+  { key: "aircraft.manage", label: "Manage aircraft", roles: ["operatorAdmin"] },
+  { key: "agent.manage", label: "Manage agents", roles: ["operatorAdmin"] },
+  {
+    key: "org.profile.manage",
+    label: "Manage operator profile and KYC",
+    roles: ["operatorAdmin"],
+  },
+  {
+    key: "permit.view",
+    label: "View permits",
+    roles: [
+      "operatorAdmin",
+      "permitOfficer",
+      "operatorFinance",
+      "viewer",
+      "reviewer",
+      "finance",
+      "approver",
+      "superadmin",
+    ],
+  },
+  { key: "permit.approve", label: "Approve permit", roles: ["approver", "superadmin"] },
+  { key: "permit.issue", label: "Issue digital permit", roles: ["approver", "superadmin"] },
+  {
+    key: "permit.revise",
+    label: "Request permit revision",
+    roles: ["operatorAdmin", "permitOfficer"],
+  },
+  {
+    key: "permit.revise.approve",
+    label: "Approve permit revision",
+    roles: ["approver", "superadmin"],
+  },
+  {
+    key: "audit.view",
+    label: "View audit trail",
+    roles: ["reviewer", "finance", "approver", "superadmin"],
+  },
+  { key: "user.manage", label: "Manage users", roles: ["operatorAdmin", "superadmin"] },
+  { key: "roles.manage", label: "Manage roles and permissions", roles: ["superadmin"] },
   { key: "verify.public", label: "Verify permit (public)", roles: ["public"] },
 ];
 

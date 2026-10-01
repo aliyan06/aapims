@@ -18,6 +18,7 @@ import { Route as AuthorityAuditRouteImport } from './routes/authority/audit'
 import { Route as AuthorityDashboardRouteImport } from './routes/authority/dashboard'
 import { Route as AuthorityNotificationsRouteImport } from './routes/authority/notifications'
 import { Route as AuthorityRolesRouteImport } from './routes/authority/roles'
+import { Route as AuthoritySearchRouteImport } from './routes/authority/search'
 import { Route as OperatorAgentsRouteImport } from './routes/operator/agents'
 import { Route as OperatorAircraftRouteImport } from './routes/operator/aircraft'
 import { Route as OperatorApplyRouteImport } from './routes/operator/apply'
@@ -88,6 +89,11 @@ const AuthorityNotificationsRoute = AuthorityNotificationsRouteImport.update({
 const AuthorityRolesRoute = AuthorityRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => AuthorityRoute,
+} as any)
+const AuthoritySearchRoute = AuthoritySearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AuthorityRoute,
 } as any)
 const OperatorAgentsRoute = OperatorAgentsRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/authority/dashboard': typeof AuthorityDashboardRoute
   '/authority/notifications': typeof AuthorityNotificationsRoute
   '/authority/roles': typeof AuthorityRolesRoute
+  '/authority/search': typeof AuthoritySearchRoute
   '/operator/agents': typeof OperatorAgentsRoute
   '/operator/aircraft': typeof OperatorAircraftRouteWithChildren
   '/operator/apply': typeof OperatorApplyRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/authority/dashboard': typeof AuthorityDashboardRoute
   '/authority/notifications': typeof AuthorityNotificationsRoute
   '/authority/roles': typeof AuthorityRolesRoute
+  '/authority/search': typeof AuthoritySearchRoute
   '/operator/agents': typeof OperatorAgentsRoute
   '/operator/aircraft': typeof OperatorAircraftRouteWithChildren
   '/operator/apply': typeof OperatorApplyRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/authority/dashboard': typeof AuthorityDashboardRoute
   '/authority/notifications': typeof AuthorityNotificationsRoute
   '/authority/roles': typeof AuthorityRolesRoute
+  '/authority/search': typeof AuthoritySearchRoute
   '/operator/agents': typeof OperatorAgentsRoute
   '/operator/aircraft': typeof OperatorAircraftRouteWithChildren
   '/operator/apply': typeof OperatorApplyRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
     | '/authority/dashboard'
     | '/authority/notifications'
     | '/authority/roles'
+    | '/authority/search'
     | '/operator/agents'
     | '/operator/aircraft'
     | '/operator/apply'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/authority/dashboard'
     | '/authority/notifications'
     | '/authority/roles'
+    | '/authority/search'
     | '/operator/agents'
     | '/operator/aircraft'
     | '/operator/apply'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/authority/dashboard'
     | '/authority/notifications'
     | '/authority/roles'
+    | '/authority/search'
     | '/operator/agents'
     | '/operator/aircraft'
     | '/operator/apply'
@@ -528,6 +540,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/authority/roles'
       preLoaderRoute: typeof AuthorityRolesRouteImport
+      parentRoute: typeof AuthorityRoute
+    }
+    '/authority/search': {
+      id: '/authority/search'
+      path: '/search'
+      fullPath: '/authority/search'
+      preLoaderRoute: typeof AuthoritySearchRouteImport
       parentRoute: typeof AuthorityRoute
     }
     '/operator/agents': {
@@ -738,6 +757,7 @@ interface AuthorityRouteChildren {
   AuthorityDashboardRoute: typeof AuthorityDashboardRoute
   AuthorityNotificationsRoute: typeof AuthorityNotificationsRoute
   AuthorityRolesRoute: typeof AuthorityRolesRoute
+  AuthoritySearchRoute: typeof AuthoritySearchRoute
   AuthorityApplicationsReferenceRoute: typeof AuthorityApplicationsReferenceRouteWithChildren
   AuthorityApprovalReferenceRoute: typeof AuthorityApprovalReferenceRoute
   AuthorityFinanceReferenceRoute: typeof AuthorityFinanceReferenceRoute
@@ -754,6 +774,7 @@ const AuthorityRouteChildren: AuthorityRouteChildren = {
   AuthorityDashboardRoute: AuthorityDashboardRoute,
   AuthorityNotificationsRoute: AuthorityNotificationsRoute,
   AuthorityRolesRoute: AuthorityRolesRoute,
+  AuthoritySearchRoute: AuthoritySearchRoute,
   AuthorityApplicationsReferenceRoute:
     AuthorityApplicationsReferenceRouteWithChildren,
   AuthorityApprovalReferenceRoute: AuthorityApprovalReferenceRoute,

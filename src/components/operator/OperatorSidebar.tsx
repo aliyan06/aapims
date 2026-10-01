@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   Bell,
   Building2,
@@ -6,12 +7,15 @@ import {
   FileText,
   FolderCheck,
   LayoutDashboard,
+  LogOut,
   Plane,
   ShieldCheck,
   UserCog,
 } from "lucide-react";
 import { PortalSidebar, type SidebarItem } from "@/components/desktop";
-import { useOperator, useUnreadCount } from "@/store";
+import { ROLE_LABEL } from "@/components/shell/roles";
+import { isCustomerRole, roleHasPermission } from "@/lib/rbac";
+import { roleToAudience, useActiveRole, useOperator, useUnreadCount } from "@/store";
 import { cn } from "@/lib/utils";
 
 /** Status pill shown in the sidebar footer, driven by the operator record. */
@@ -22,25 +26,46 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function OperatorSidebar() {
+  const activeRole = useActiveRole();
+  const role = isCustomerRole(activeRole) ? activeRole : "operatorAdmin";
   const operator = useOperator();
-  const unread = useUnreadCount("operator");
+  const unread = useUnreadCount(roleToAudience(role));
 
   const items: SidebarItem[] = [
     { label: "Dashboard", to: "/operator/dashboard", icon: LayoutDashboard },
-    { label: "My Applications", to: "/operator/applications", icon: FileText },
-    { label: "Apply for Permit", to: "/operator/apply", icon: FilePlus },
-    { label: "Aircraft", to: "/operator/aircraft", icon: Plane },
-    { label: "Documents", to: "/operator/documents", icon: FolderCheck },
-    { label: "Agents", to: "/operator/agents", icon: UserCog },
-    { label: "Payments", to: "/operator/payments", icon: CreditCard },
-    { label: "My Permits", to: "/operator/permits", icon: ShieldCheck },
-    { label: "Registration", to: "/operator/registration", icon: Building2 },
-    { label: "Notifications", to: "/operator/notifications", icon: Bell, badge: unread },
   ];
+
+  if (roleHasPermission(role, "app.view")) {
+    items.push({ label: "My Applications", to: "/operator/applications", icon: FileText });
+  }
+  if (roleHasPermission(role, "app.create")) {
+    items.push({ label: "Apply for Permit", to: "/operator/apply", icon: FilePlus });
+  }
+  if (roleHasPermission(role, "aircraft.manage")) {
+    items.push({ label: "Aircraft", to: "/operator/aircraft", icon: Plane });
+  }
+  if (roleHasPermission(role, "doc.manage")) {
+    items.push({ label: "Documents", to: "/operator/documents", icon: FolderCheck });
+  }
+  if (roleHasPermission(role, "agent.manage")) {
+    items.push({ label: "Agents", to: "/operator/agents", icon: UserCog });
+  }
+  if (roleHasPermission(role, "payment.manage")) {
+    items.push({ label: "Payments", to: "/operator/payments", icon: CreditCard });
+  }
+  if (roleHasPermission(role, "permit.view")) {
+    items.push({ label: "My Permits", to: "/operator/permits", icon: ShieldCheck });
+  }
+  if (roleHasPermission(role, "org.profile.manage")) {
+    items.push({ label: "Registration", to: "/operator/registration", icon: Building2 });
+  }
+  items.push({ label: "Profile", to: "/operator/profile", icon: Building2 });
+  items.push({ label: "Notifications", to: "/operator/notifications", icon: Bell, badge: unread });
 
   const footer = (
     <div className="leading-tight">
       <div className="truncate text-[13px] font-bold text-white">{operator.company}</div>
+      <div className="mt-1 text-[11px] font-semibold text-white/60">{ROLE_LABEL[role]}</div>
       <div className="mt-1 flex items-center gap-2">
         <span
           className={cn(
@@ -52,6 +77,13 @@ export function OperatorSidebar() {
         </span>
         <span className="text-[10px] font-semibold text-white/50">{operator.operatorId}</span>
       </div>
+      <Link
+        to="/login"
+        className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-white/60 transition-colors hover:text-white"
+      >
+        <LogOut size={13} />
+        Sign out
+      </Link>
     </div>
   );
 

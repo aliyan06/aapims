@@ -87,5 +87,25 @@ export const useAppStore = create<AppStore>((set, get) => {
     approveRevision: (id) => run((state) => transitions.approveRevision(state, id)),
     rejectRevision: (id) => run((state) => transitions.rejectRevision(state, id)),
     markNotificationRead: (id) => run((state) => transitions.markNotificationRead(state, id)),
+
+    verifyDocument: (documentId, comment) =>
+      run((state) => transitions.verifyDocument(state, documentId, comment)),
+    rejectDocument: (documentId, comment) =>
+      run((state) => transitions.rejectDocument(state, documentId, comment)),
+    requestDocumentReplacement: (documentId, comment) =>
+      run((state) => transitions.requestDocumentReplacement(state, documentId, comment)),
+    addDocumentObservation: (documentId, comment) =>
+      run((state) => transitions.addDocumentObservation(state, documentId, comment)),
+
+    suspendAgent: (agentId) => run((state) => transitions.suspendAgent(state, agentId)),
+    reactivateAgent: (agentId) => run((state) => transitions.reactivateAgent(state, agentId)),
+    expireAgent: (agentId) => run((state) => transitions.expireAgent(state, agentId)),
+
+    payApplication: (applicationId, method) =>
+      run((state) => transitions.payApplication(state, applicationId, method)),
+
+    revokePermit: (permitId, reason) =>
+      run((state) => transitions.revokePermit(state, permitId, reason)),
+    expirePermit: (permitId) => run((state) => transitions.expirePermit(state, permitId)),
   };
 });

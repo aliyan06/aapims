@@ -70,7 +70,17 @@ export type RevisionType =
 
 export type RevisionStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type Role = "operator" | "reviewer" | "finance" | "approver" | "public";
+/** Authority-side roles. */
+export type AuthorityRole = "superadmin" | "reviewer" | "approver" | "finance";
+
+/** Customer-side (operator) roles. */
+export type CustomerRole = "operatorAdmin" | "permitOfficer" | "operatorFinance" | "viewer";
+
+/** All login roles plus the unauthenticated public verification surface. */
+export type Role = AuthorityRole | CustomerRole | "public";
+
+/** Notifications are addressed to an audience, coarser than the granular role. */
+export type NotificationAudience = "customer" | "reviewer" | "finance" | "approver" | "public";
 
 export type OperatorRecord = {
   id: string;
@@ -130,6 +140,9 @@ export type DocumentRecord = {
   version: number;
   uploadedAt: string;
   reference: string;
+  /** Reviewer verification comment (features.md §8). */
+  reviewerComment?: string;
+  verifiedBy?: string;
 };
 
 export type FlightDetails = {
@@ -138,6 +151,17 @@ export type FlightDetails = {
   passengerCount: number;
   cargo: string;
   purpose: string;
+  /** Special information / remarks (features.md §5 special information). */
+  specialInfo?: string;
+  /** PAX detail (features.md §7). */
+  passengerManifest?: string;
+  receivingParty?: string;
+  receivingPartyContact?: string;
+  /** Cargo detail (features.md §7). */
+  cargoManifest?: string;
+  shipper?: string;
+  consignee?: string;
+  airWaybill?: string;
 };
 
 export type RouteDetails = {
@@ -150,6 +174,14 @@ export type RouteDetails = {
   departureAt: string;
   arrivalAt: string;
   timezone: string;
+  /** Estimated entry/exit times (features.md §6). */
+  estimatedEntryAt?: string;
+  estimatedExitAt?: string;
+  /** Landing-specific (features.md §6). */
+  departureSlot?: string;
+  arrivalSlot?: string;
+  groundHandlingAgent?: string;
+  purposeOfVisit?: string;
 };
 
 export type ValidationCheck = {
@@ -158,6 +190,8 @@ export type ValidationCheck = {
   outcome: ValidationOutcome;
   detail: string;
 };
+
+export type BillingModel = "Prepaid / Advance Deposit" | "Postpaid";
 
 export type FinanceDetails = {
   permitFee: number;
@@ -168,6 +202,11 @@ export type FinanceDetails = {
   paymentMethod: "Advance Deposit / Wallet" | "Online Payment" | null;
   paidAt: string | null;
   holdReason: string | null;
+  /** Billing model and postpaid invoice fields (features.md §12). */
+  billingModel: BillingModel;
+  invoiceNumber?: string;
+  dueDate?: string;
+  outstanding?: number;
 };
 
 export type RevisionRecord = {
@@ -233,6 +272,8 @@ export type PermitRecord = {
   version: number;
   issuedAt: string;
   signedBy: string;
+  /** Agent that submitted on the operator's behalf, if any (features.md §14). */
+  agentId?: string | null;
   checksum: string;
   verificationReference: string;
   revisionIds: string[];
@@ -252,7 +293,7 @@ export type AuditEntry = {
 
 export type NotificationRecord = {
   id: string;
-  targetRole: Role;
+  targetRole: NotificationAudience;
   type: string;
   text: string;
   time: string;

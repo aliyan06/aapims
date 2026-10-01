@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bell, LogOut } from "lucide-react";
 import { ROLE_LABEL, ROLE_SHORT_LABEL, type Role } from "@/components/shell/roles";
-import { useUnreadCount } from "@/store";
+import { roleToAudience, useUnreadCount } from "@/store";
 
 type PortalTopbarProps = {
   title: string;
@@ -19,7 +19,7 @@ export function PortalTopbar({
   actions,
   notificationsTo,
 }: PortalTopbarProps) {
-  const unread = useUnreadCount(role);
+  const unread = useUnreadCount(roleToAudience(role));
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border-soft bg-surface px-6">

@@ -1,6 +1,28 @@
 import { useShallow } from "zustand/react/shallow";
-import type { DemoWorld, Role } from "@/data/types";
+import type { DemoWorld, NotificationAudience, Role } from "@/data/types";
+import { ROLE_PERMISSIONS, roleHasPermission, type PermissionKey } from "@/lib/rbac";
 import { useAppStore } from "./store";
+
+/** Maps the granular active role to the notification audience it should read. */
+export function roleToAudience(role: Role): NotificationAudience | "all" {
+  switch (role) {
+    case "operatorAdmin":
+    case "permitOfficer":
+    case "operatorFinance":
+    case "viewer":
+      return "customer";
+    case "reviewer":
+      return "reviewer";
+    case "finance":
+      return "finance";
+    case "approver":
+      return "approver";
+    case "superadmin":
+      return "all";
+    case "public":
+      return "public";
+  }
+}
 
 export const useWorld = (): DemoWorld => useAppStore((s) => s.world);
 export const useActiveRole = (): Role => useAppStore((s) => s.meta.activeRole);
@@ -57,19 +79,22 @@ export function useOperatorApplications() {
   );
 }
 
-export function useNotifications(role: Role) {
+export function useNotifications(audience: NotificationAudience | "all") {
   return useAppStore(
     useShallow((s) =>
-      s.world.notifications.filter((notification) => notification.targetRole === role),
+      audience === "all"
+        ? s.world.notifications
+        : s.world.notifications.filter((notification) => notification.targetRole === audience),
     ),
   );
 }
 
-export function useUnreadCount(role: Role) {
+export function useUnreadCount(audience: NotificationAudience | "all") {
   return useAppStore(
     (s) =>
       s.world.notifications.filter(
-        (notification) => notification.targetRole === role && !notification.read,
+        (notification) =>
+          (audience === "all" || notification.targetRole === audience) && !notification.read,
       ).length,
   );
 }
@@ -77,13 +102,25 @@ export function useUnreadCount(role: Role) {
 export function useNotificationSummary() {
   return useAppStore(
     useShallow((s) => ({
-      operator: s.world.notifications.filter((n) => n.targetRole === "operator").length,
+      customer: s.world.notifications.filter((n) => n.targetRole === "customer").length,
       reviewer: s.world.notifications.filter((n) => n.targetRole === "reviewer").length,
       finance: s.world.notifications.filter((n) => n.targetRole === "finance").length,
       approver: s.world.notifications.filter((n) => n.targetRole === "approver").length,
       public: s.world.notifications.filter((n) => n.targetRole === "public").length,
     })),
   );
+}
+
+/** True when the active role holds the given permission (features.md §20). */
+export function usePermission(permission: PermissionKey): boolean {
+  const role = useActiveRole();
+  return roleHasPermission(role, permission);
+}
+
+/** The full permission list for the active role, for menus and guards. */
+export function useActivePermissions(): readonly PermissionKey[] {
+  const role = useActiveRole();
+  return ROLE_PERMISSIONS[role];
 }
 
 /** Flat, primitive-only snapshot for the dev StoreInspector. */

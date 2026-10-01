@@ -95,7 +95,7 @@ function TechnicalQueue() {
   return (
     <PortalPage
       title="Technical Review"
-      description="Applications that have cleared finance and await route and airframe verification."
+      description="Applications that have cleared finance and await route, airframe, airspace, conflict and duplicate-request checks."
       breadcrumb={[{ label: "Authority" }, { label: "Technical Review" }]}
     >
       <SectionCard

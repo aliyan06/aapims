@@ -7,11 +7,14 @@ import {
   clearFinancialHold,
   issuePermit,
   passTechnicalReview,
+  payApplication,
   recommendApproval,
   rejectPermit,
   requestInformation,
   requestRevision,
   submitApplication,
+  suspendAgent,
+  verifyDocument,
 } from "./transitions";
 
 const APP = STORY_IDS.application;
@@ -101,6 +104,33 @@ describe("permit workflow transitions", () => {
     const permit = state.world.permits.find((item) => item.permitNumber === STORY_IDS.permitNumber);
     expect(permit?.version).toBe(2);
     expect(permit?.status).toBe("REISSUED");
+  });
+
+  it("blocks submission when the linked agent authorization is not active", () => {
+    const state = buildInitialState();
+    expect(suspendAgent(state, STORY_IDS.agent).ok).toBe(true);
+    const result = submitApplication(state, APP);
+    expect(result.ok).toBe(false);
+    expect(heroStatus(state)).toBe("DRAFT");
+  });
+
+  it("verifies a document and records the reviewer", () => {
+    const state = buildInitialState();
+    expect(verifyDocument(state, "doc-gwa-aoc", "Checked against the register.").ok).toBe(true);
+    const doc = state.world.documents.find((item) => item.id === "doc-gwa-aoc");
+    expect(doc?.status).toBe("VALID");
+    expect(doc?.reviewerComment).toBe("Checked against the register.");
+  });
+
+  it("pays from the wallet and reduces the balance", () => {
+    const state = buildInitialState();
+    const hero = state.world.applications.find((item) => item.id === APP);
+    if (!hero) throw new Error("hero application missing");
+    hero.finance.paymentStatus = "UNPAID";
+    const before = state.world.wallet.balance;
+    expect(payApplication(state, APP, "wallet").ok).toBe(true);
+    expect(hero.finance.paymentStatus).toBe("PAID");
+    expect(state.world.wallet.balance).toBe(before - 550);
   });
 
   it("rejects a permit from the approval stage", () => {

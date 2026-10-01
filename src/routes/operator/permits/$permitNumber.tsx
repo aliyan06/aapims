@@ -9,7 +9,14 @@ import {
 } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import { DigitalPermit } from "@/components/permit/DigitalPermit";
-import { formatDateTime, useApplication, useAppStore, usePermit, useRevisions } from "@/store";
+import {
+  formatDateTime,
+  useApplication,
+  useAppStore,
+  usePermission,
+  usePermit,
+  useRevisions,
+} from "@/store";
 
 export const Route = createFileRoute("/operator/permits/$permitNumber")({
   component: PermitDetail,
@@ -22,6 +29,7 @@ function PermitDetail() {
   const application = useApplication(permit?.applicationReference ?? "");
   const revisions = useRevisions();
   const pushToast = useAppStore((s) => s.pushToast);
+  const canRevise = usePermission("permit.revise");
 
   if (!permit) {
     return (
@@ -51,17 +59,19 @@ function PermitDetail() {
       description={`${permit.authorization} permit · ${permit.routeLabel}`}
       breadcrumb={[{ label: "Permits", to: "/operator/permits" }, { label: permit.permitNumber }]}
       actions={
-        <Button
-          variant="outline"
-          onClick={() =>
-            navigate({
-              to: "/operator/revision/$permitNumber",
-              params: { permitNumber: permit.permitNumber },
-            })
-          }
-        >
-          <PencilLine size={15} /> Request Revision
-        </Button>
+        canRevise ? (
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate({
+                to: "/operator/revision/$permitNumber",
+                params: { permitNumber: permit.permitNumber },
+              })
+            }
+          >
+            <PencilLine size={15} /> Request Revision
+          </Button>
+        ) : undefined
       }
     >
       <div className="space-y-5">
@@ -107,6 +117,13 @@ function PermitDetail() {
             navigate({
               to: "/verify",
               search: { permit: permit.permitNumber, reference: undefined },
+            })
+          }
+          onEmail={() =>
+            pushToast({
+              title: "Permit emailed",
+              description: "Permit emailed to the operator (demo).",
+              tone: "info",
             })
           }
         />

@@ -1,7 +1,9 @@
 import { Check, Minus, ShieldCheck, Users } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, KpiTile, PortalPage, SectionCard, type Column } from "@/components/desktop";
+import { ROLE_LABEL } from "@/components/shell/roles";
 import type { RbacPermission, Role } from "@/data/types";
+import { PERMISSION_LABEL, type PermissionKey } from "@/lib/rbac";
 import { useRbacPermissions, useRbacRoles } from "@/store";
 
 export const Route = createFileRoute("/authority/roles")({
@@ -10,16 +12,17 @@ export const Route = createFileRoute("/authority/roles")({
 
 /**
  * Maps an RBAC role definition to the coarse permission role used by
- * `permission.roles`. Super Admin is intentionally absent — it has full access.
+ * `permission.roles`. Super Admin maps to `superadmin`, which holds every key.
  */
 const RBAC_TO_PERMISSION_ROLE: Record<string, Role> = {
+  "super-admin": "superadmin",
   "permit-reviewer": "reviewer",
   "permit-approver": "approver",
   "finance-officer": "finance",
-  "operator-admin": "operator",
-  "permit-officer": "operator",
-  "operator-finance": "operator",
-  viewer: "operator",
+  "operator-admin": "operatorAdmin",
+  "permit-officer": "permitOfficer",
+  "operator-finance": "operatorFinance",
+  viewer: "viewer",
 };
 
 const SIDES: readonly { side: "Authority Side" | "Customer Side"; description: string }[] = [
@@ -27,15 +30,34 @@ const SIDES: readonly { side: "Authority Side" | "Customer Side"; description: s
   { side: "Customer Side", description: "Operator and applicant accounts." },
 ];
 
+type CatalogueRow = {
+  key: PermissionKey;
+  label: string;
+  roles: Role[];
+};
+
 function permissionGranted(permission: RbacPermission, roleKey: string): boolean {
   if (roleKey === "super-admin") return true;
   const mapped = RBAC_TO_PERMISSION_ROLE[roleKey];
   return mapped ? permission.roles.includes(mapped) : false;
 }
 
+function formatRoles(roles: readonly Role[]): string {
+  return roles.length > 0 ? roles.map((role) => ROLE_LABEL[role]).join(", ") : "—";
+}
+
 function RolesMatrix() {
   const roles = useRbacRoles();
   const permissions = useRbacPermissions();
+
+  const permissionByKey = new Map(permissions.map((permission) => [permission.key, permission]));
+  const catalogue: CatalogueRow[] = (Object.keys(PERMISSION_LABEL) as PermissionKey[]).map(
+    (key) => ({
+      key,
+      label: PERMISSION_LABEL[key],
+      roles: permissionByKey.get(key)?.roles ?? [],
+    }),
+  );
 
   const columns: Column<RbacPermission>[] = [
     {
@@ -62,6 +84,24 @@ function RolesMatrix() {
     })),
   ];
 
+  const catalogueColumns: Column<CatalogueRow>[] = [
+    {
+      key: "permission",
+      header: "Permission",
+      cell: (row) => <span className="font-semibold text-text-dark">{row.label}</span>,
+    },
+    {
+      key: "key",
+      header: "Key",
+      cell: (row) => <span className="font-mono text-[12px] text-text-muted">{row.key}</span>,
+    },
+    {
+      key: "roles",
+      header: "Granted to",
+      cell: (row) => <span className="text-text-muted">{formatRoles(row.roles)}</span>,
+    },
+  ];
+
   return (
     <PortalPage
       title="Roles & Permissions"
@@ -69,11 +109,24 @@ function RolesMatrix() {
       breadcrumb={[{ label: "Authority" }, { label: "Roles" }]}
     >
       <div className="space-y-5">
+        <SectionCard title="How access works">
+          <p className="text-[13px] text-text-muted">
+            AAPIMS enforces access in two layers.{" "}
+            <strong className="text-text-dark">Role-based UI visibility</strong> decides which
+            screens, sections and navigation items a signed-in user sees — an Operator Admin lands
+            on the operator portal while a Permit Approver lands on the authority approval desk.{" "}
+            <strong className="text-text-dark">Permission-based actions</strong> then guard the
+            controls those screens expose: each button, decision and transition checks the
+            permission catalogue below, so a role only performs the actions it has been granted. The
+            matrix is the single source of truth for both layers.
+          </p>
+        </SectionCard>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <KpiTile label="Roles" value={roles.length} icon={Users} tone="info" />
           <KpiTile
             label="Permissions"
-            value={permissions.length}
+            value={Object.keys(PERMISSION_LABEL).length}
             icon={ShieldCheck}
             tone="success"
           />
@@ -109,6 +162,19 @@ function RolesMatrix() {
             </SectionCard>
           ))}
         </div>
+
+        <SectionCard
+          title="Permission catalogue"
+          description="Every permission in the system and the roles that hold it. Role-based visibility and action guards both resolve through this catalogue."
+          padded={false}
+        >
+          <DataTable
+            columns={catalogueColumns}
+            rows={catalogue}
+            getRowKey={(row) => row.key}
+            emptyTitle="No permissions defined"
+          />
+        </SectionCard>
 
         <SectionCard
           title="Permission matrix"
