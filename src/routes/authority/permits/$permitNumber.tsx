@@ -46,6 +46,8 @@ function AuthorityPermitDetail() {
   const rejectRevision = useAppStore((s) => s.rejectRevision);
   const revokePermit = useAppStore((s) => s.revokePermit);
   const expirePermit = useAppStore((s) => s.expirePermit);
+  const activatePermit = useAppStore((s) => s.activatePermit);
+  const sendPermitExpiryReminder = useAppStore((s) => s.sendPermitExpiryReminder);
   const canDecideRevisions = usePermission("permit.revise.approve");
   const canManageStatus = usePermission("permit.approve");
   const [revokeReason, setRevokeReason] = useState("");
@@ -147,7 +149,13 @@ function AuthorityPermitDetail() {
                   onChange={(event) => setRevokeReason(event.target.value)}
                 />
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {permit.status === "ISSUED" || permit.status === "REISSUED" ? (
+                  <Button onClick={() => activatePermit(permit.id)}>Activate permit</Button>
+                ) : null}
+                <Button variant="outline" onClick={() => sendPermitExpiryReminder(permit.id)}>
+                  Send expiry reminder
+                </Button>
                 <Button variant="outline" onClick={() => expirePermit(permit.id)}>
                   Mark expired
                 </Button>

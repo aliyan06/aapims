@@ -19,7 +19,8 @@ export type FlightCategory =
   | "Humanitarian / Emergency"
   | "Search & Rescue"
   | "Air Ambulance / Medical Evacuation"
-  | "Ferry / Test / Delivery";
+  | "Ferry / Test / Delivery"
+  | "Relief / Humanitarian";
 
 export type ApplicationStatus =
   | "DRAFT"
@@ -30,6 +31,7 @@ export type ApplicationStatus =
   | "AWAITING FINAL APPROVAL"
   | "APPROVED"
   | "ISSUED"
+  | "ACTIVE"
   | "REVISION REQUESTED"
   | "REISSUED"
   | "REJECTED"

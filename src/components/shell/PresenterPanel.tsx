@@ -16,8 +16,10 @@ import {
   Wallet,
 } from "lucide-react";
 import {
+  AUTHORITY_ROLES,
+  CUSTOMER_ROLES,
   DEMO_START_ROUTE,
-  ROLES,
+  PUBLIC_ROLES,
   ROLE_HOME,
   ROLE_LABEL,
   type Role,
@@ -37,6 +39,13 @@ const ROLE_ICON: Record<Role, ComponentType<{ size?: number; className?: string 
   public: ScanLine,
 };
 
+/** Presenter role groups, matching the specification's Authority/Customer sides. */
+const ROLE_SECTIONS: readonly { label: string; roles: readonly Role[] }[] = [
+  { label: "Authority Side", roles: AUTHORITY_ROLES },
+  { label: "Customer Side", roles: CUSTOMER_ROLES },
+  { label: "Public", roles: PUBLIC_ROLES },
+];
+
 type PresenterPanelProps = {
   open: boolean;
   onToggle: () => void;
@@ -47,7 +56,7 @@ export function PresenterPanel({ open, onToggle }: PresenterPanelProps) {
   const navigate = useNavigate();
   const role = useAppStore((s) => s.meta.activeRole);
   const clockIso = useAppStore((s) => s.clock.iso);
-  const setActiveRole = useAppStore((s) => s.setActiveRole);
+  const signIn = useAppStore((s) => s.signIn);
   const resetDemo = useAppStore((s) => s.resetDemo);
 
   if (!open) {
@@ -96,36 +105,38 @@ export function PresenterPanel({ open, onToggle }: PresenterPanelProps) {
           <div className="mt-1 truncate text-[11px] text-white/60">Representative demo state</div>
         </section>
 
-        <section>
-          <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
-            Role
-          </h2>
-          <div className="space-y-1">
-            {ROLES.map((r) => {
-              const Icon = ROLE_ICON[r];
-              const active = r === role;
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => {
-                    setActiveRole(r);
-                    void navigate({ to: ROLE_HOME[r] });
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-semibold transition-colors",
-                    active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-white/80 hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  <Icon size={16} />
-                  {ROLE_LABEL[r]}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        {ROLE_SECTIONS.map((section) => (
+          <section key={section.label}>
+            <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
+              {section.label}
+            </h2>
+            <div className="space-y-1">
+              {section.roles.map((r) => {
+                const Icon = ROLE_ICON[r];
+                const active = r === role;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      signIn(r);
+                      void navigate({ to: ROLE_HOME[r] });
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-semibold transition-colors",
+                      active
+                        ? "bg-accent text-accent-foreground"
+                        : "text-white/80 hover:bg-white/10 hover:text-white",
+                    )}
+                  >
+                    <Icon size={16} />
+                    {ROLE_LABEL[r]}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
 
       <div className="border-t border-white/10 p-3">

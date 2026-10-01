@@ -36,6 +36,7 @@ import { Route as AuthorityFinanceIndexRouteImport } from './routes/authority/fi
 import { Route as AuthorityFinanceReferenceRouteImport } from './routes/authority/finance/$reference'
 import { Route as AuthorityPermitsIndexRouteImport } from './routes/authority/permits/index'
 import { Route as AuthorityPermitsPermitNumberRouteImport } from './routes/authority/permits/$permitNumber'
+import { Route as AuthorityReviewIndexRouteImport } from './routes/authority/review/index'
 import { Route as AuthorityTechnicalIndexRouteImport } from './routes/authority/technical/index'
 import { Route as OperatorAircraftAircraftIdRouteImport } from './routes/operator/aircraft/$aircraftId'
 import { Route as OperatorApplicationsIndexRouteImport } from './routes/operator/applications/index'
@@ -186,6 +187,11 @@ const AuthorityPermitsPermitNumberRoute =
     path: '/permits/$permitNumber',
     getParentRoute: () => AuthorityRoute,
   } as any)
+const AuthorityReviewIndexRoute = AuthorityReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => AuthorityRoute,
+} as any)
 const AuthorityTechnicalIndexRoute = AuthorityTechnicalIndexRouteImport.update({
   id: '/technical/',
   path: '/technical/',
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/authority/approval/': typeof AuthorityApprovalIndexRoute
   '/authority/finance/': typeof AuthorityFinanceIndexRoute
   '/authority/permits/': typeof AuthorityPermitsIndexRoute
+  '/authority/review/': typeof AuthorityReviewIndexRoute
   '/authority/technical/': typeof AuthorityTechnicalIndexRoute
   '/operator/applications/': typeof OperatorApplicationsIndexRoute
   '/operator/permits/': typeof OperatorPermitsIndexRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/authority/approval': typeof AuthorityApprovalIndexRoute
   '/authority/finance': typeof AuthorityFinanceIndexRoute
   '/authority/permits': typeof AuthorityPermitsIndexRoute
+  '/authority/review': typeof AuthorityReviewIndexRoute
   '/authority/technical': typeof AuthorityTechnicalIndexRoute
   '/operator/applications': typeof OperatorApplicationsIndexRoute
   '/operator/permits': typeof OperatorPermitsIndexRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/authority/approval/': typeof AuthorityApprovalIndexRoute
   '/authority/finance/': typeof AuthorityFinanceIndexRoute
   '/authority/permits/': typeof AuthorityPermitsIndexRoute
+  '/authority/review/': typeof AuthorityReviewIndexRoute
   '/authority/technical/': typeof AuthorityTechnicalIndexRoute
   '/operator/applications/': typeof OperatorApplicationsIndexRoute
   '/operator/permits/': typeof OperatorPermitsIndexRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/authority/approval/'
     | '/authority/finance/'
     | '/authority/permits/'
+    | '/authority/review/'
     | '/authority/technical/'
     | '/operator/applications/'
     | '/operator/permits/'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/authority/approval'
     | '/authority/finance'
     | '/authority/permits'
+    | '/authority/review'
     | '/authority/technical'
     | '/operator/applications'
     | '/operator/permits'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/authority/approval/'
     | '/authority/finance/'
     | '/authority/permits/'
+    | '/authority/review/'
     | '/authority/technical/'
     | '/operator/applications/'
     | '/operator/permits/'
@@ -668,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorityPermitsPermitNumberRouteImport
       parentRoute: typeof AuthorityRoute
     }
+    '/authority/review/': {
+      id: '/authority/review/'
+      path: '/review'
+      fullPath: '/authority/review/'
+      preLoaderRoute: typeof AuthorityReviewIndexRouteImport
+      parentRoute: typeof AuthorityRoute
+    }
     '/authority/technical/': {
       id: '/authority/technical/'
       path: '/technical'
@@ -766,6 +785,7 @@ interface AuthorityRouteChildren {
   AuthorityApprovalIndexRoute: typeof AuthorityApprovalIndexRoute
   AuthorityFinanceIndexRoute: typeof AuthorityFinanceIndexRoute
   AuthorityPermitsIndexRoute: typeof AuthorityPermitsIndexRoute
+  AuthorityReviewIndexRoute: typeof AuthorityReviewIndexRoute
   AuthorityTechnicalIndexRoute: typeof AuthorityTechnicalIndexRoute
 }
 
@@ -784,6 +804,7 @@ const AuthorityRouteChildren: AuthorityRouteChildren = {
   AuthorityApprovalIndexRoute: AuthorityApprovalIndexRoute,
   AuthorityFinanceIndexRoute: AuthorityFinanceIndexRoute,
   AuthorityPermitsIndexRoute: AuthorityPermitsIndexRoute,
+  AuthorityReviewIndexRoute: AuthorityReviewIndexRoute,
   AuthorityTechnicalIndexRoute: AuthorityTechnicalIndexRoute,
 }
 

@@ -6,6 +6,7 @@ import {
   FileWarning,
   Info,
   PauseCircle,
+  ReceiptText,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
@@ -19,7 +20,9 @@ import {
   PaymentBadge,
   PortalPage,
   SectionCard,
+  UnderlineTabs,
   type ChecklistItem,
+  type UnderlineTab,
 } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +51,11 @@ export const Route = createFileRoute("/authority/finance/$reference")({
 
 const DEFAULT_HOLD_REASON = "Awaiting bank confirmation";
 
+const BILLING_TABS: UnderlineTab[] = [
+  { key: "Prepaid / Advance Deposit", label: "Prepaid" },
+  { key: "Postpaid", label: "Postpaid" },
+];
+
 function FinanceDetail() {
   const { reference } = Route.useParams();
   const navigate = useNavigate();
@@ -58,6 +66,7 @@ function FinanceDetail() {
   const verifyPayment = useAppStore((s) => s.verifyPayment);
   const placeFinancialHold = useAppStore((s) => s.placeFinancialHold);
   const clearFinancialHold = useAppStore((s) => s.clearFinancialHold);
+  const setBillingModel = useAppStore((s) => s.setBillingModel);
 
   const canVerify = usePermission("finance.verify");
   const canHold = usePermission("finance.hold");
@@ -122,6 +131,11 @@ function FinanceDetail() {
       outcome: !hasHold && !hasOutstanding ? "PASS" : "WARNING",
     },
   ];
+
+  function onChangeBillingModel(key: string) {
+    if (!application) return;
+    setBillingModel(application.id, key === "Postpaid" ? "Postpaid" : "Prepaid / Advance Deposit");
+  }
 
   function onConfirmHold() {
     if (!application) return;
@@ -204,7 +218,6 @@ function FinanceDetail() {
                     label: "Total",
                     value: `${finance.currency} ${total.toLocaleString()}`,
                   },
-                  { label: "Billing model", value: finance.billingModel },
                   { label: "Payment method", value: finance.paymentMethod ?? "Not selected" },
                   {
                     label: "Paid at",
@@ -226,6 +239,21 @@ function FinanceDetail() {
                   { label: "Hold reason", value: finance.holdReason ?? "None" },
                 ]}
               />
+              <div className="mt-4 border-t border-border-soft pt-4">
+                <div className="mb-2 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-text-subtle">
+                  <ReceiptText size={15} className="text-accent" />
+                  Billing model
+                </div>
+                {canHold ? (
+                  <UnderlineTabs
+                    tabs={BILLING_TABS}
+                    value={finance.billingModel}
+                    onChange={onChangeBillingModel}
+                  />
+                ) : (
+                  <p className="text-[13px] font-medium text-text-dark">{finance.billingModel}</p>
+                )}
+              </div>
             </SectionCard>
           </div>
 

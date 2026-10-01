@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FileCheck2, ShieldCheck } from "lucide-react";
+import { FileCheck2, Send, ShieldCheck } from "lucide-react";
 import {
   DescriptionList,
   DocumentStatusBadge,
@@ -9,8 +9,9 @@ import {
   Timeline,
   type TimelineStep,
 } from "@/components/desktop";
+import { Button } from "@/components/ui/button";
 import type { OperatorRecord } from "@/data/types";
-import { formatDate, useDocuments, useOperator } from "@/store";
+import { formatDate, useAppStore, useDocuments, useOperator, usePermission } from "@/store";
 import type { StatusTone } from "@/lib/status";
 
 export const Route = createFileRoute("/operator/registration")({
@@ -50,6 +51,11 @@ const STATUS_TONE: Record<OperatorRecord["status"], StatusTone> = {
 function RegistrationScreen() {
   const operator = useOperator();
   const documents = useDocuments();
+  const canManage = usePermission("org.profile.manage");
+  const submitRegistration = useAppStore((s) => s.submitRegistration);
+
+  const isDraft = operator.kycStatus === "DRAFT";
+  const isActive = operator.kycStatus === "ACTIVE";
 
   const currentIndex = KYC_SEQUENCE.indexOf(operator.kycStatus);
   const steps: TimelineStep[] = KYC_SEQUENCE.map((status, index) => ({
@@ -97,6 +103,29 @@ function RegistrationScreen() {
                   <StatusBadge label={operator.status} tone={STATUS_TONE[operator.status]} />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  disabled={!canManage || !isDraft}
+                  onClick={() => submitRegistration()}
+                >
+                  <Send size={15} /> Submit for verification
+                </Button>
+                <p className="text-[11px] leading-snug text-text-subtle">
+                  {isActive
+                    ? "Registration approved — this operator account is active."
+                    : operator.kycStatus === "DRAFT"
+                      ? "Submit your registration to the authority to begin KYC verification."
+                      : "Registration is already with the authority for verification."}
+                </p>
+                {!canManage ? (
+                  <p className="text-[11px] leading-snug text-text-subtle">
+                    Your role has read-only access to operator registration.
+                  </p>
+                ) : null}
+              </div>
+
               <div className="flex items-center gap-2 rounded-lg border border-status-approved/25 bg-status-approved-soft/40 px-3.5 py-2.5">
                 <ShieldCheck size={16} className="text-status-approved" />
                 <p className="text-[12px] font-semibold text-text-dark">

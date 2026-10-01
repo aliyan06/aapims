@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AircraftRecord } from "@/data/types";
-import { useAircraft, useAppStore, useOperator } from "@/store";
+import { useAircraft, useAppStore, useOperator, usePermission } from "@/store";
 
 export const Route = createFileRoute("/operator/aircraft")({
   component: AircraftRoute,
@@ -36,12 +36,15 @@ function AircraftList() {
   const navigate = useNavigate();
   const operator = useOperator();
   const aircraft = useAircraft();
-  const pushToast = useAppStore((s) => s.pushToast);
+  const registerAircraft = useAppStore((s) => s.registerAircraft);
+  const canManage = usePermission("aircraft.manage");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [registration, setRegistration] = useState("");
   const [type, setType] = useState("");
+  const [mtow, setMtow] = useState("");
 
   const rows = aircraft.filter((item) => item.operatorId === operator.id);
+  const formValid = registration.trim().length > 0 && type.trim().length > 0;
 
   const columns: Column<AircraftRecord>[] = [
     {
@@ -78,16 +81,18 @@ function AircraftList() {
     },
   ];
 
-  function submitMockAircraft() {
-    pushToast({
-      title: "Aircraft submitted for verification",
-      description: registration
-        ? `${registration} was queued for certificate verification.`
-        : "The new aircraft was queued for certificate verification.",
-      tone: "info",
+  function submitAircraft() {
+    if (!formValid || !canManage) return;
+    const parsedMtow = Number.parseInt(mtow, 10);
+    const ok = registerAircraft({
+      registration: registration.trim(),
+      type: type.trim(),
+      mtowKg: Number.isFinite(parsedMtow) ? parsedMtow : 0,
     });
+    if (!ok) return;
     setRegistration("");
     setType("");
+    setMtow("");
     setDrawerOpen(false);
   }
 
@@ -97,7 +102,7 @@ function AircraftList() {
       description="Aircraft on your Air Operator Certificate with their certificate statuses."
       breadcrumb={[{ label: "Operator" }, { label: "Aircraft" }]}
       actions={
-        <Button onClick={() => setDrawerOpen(true)}>
+        <Button disabled={!canManage} onClick={() => setDrawerOpen(true)}>
           <Plus size={15} /> Add Aircraft
         </Button>
       }
@@ -125,7 +130,7 @@ function AircraftList() {
             <Button variant="outline" onClick={() => setDrawerOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitMockAircraft}>
+            <Button disabled={!formValid || !canManage} onClick={submitAircraft}>
               <Plane size={15} /> Submit for verification
             </Button>
           </div>
@@ -135,8 +140,8 @@ function AircraftList() {
           <div className="flex items-center gap-3 rounded-lg border border-info-soft bg-info-soft/50 px-3.5 py-2.5">
             <Plane size={16} className="text-accent" />
             <p className="text-[12px] text-text-muted">
-              Certificates are validated by the authority after submission. This demo does not save
-              the record.
+              Certificates are validated by the authority after submission. The aircraft is added to
+              your fleet with all certificates pending verification.
             </p>
           </div>
           <Field label="Registration mark" required hint="For example: A6-GWA">
@@ -154,7 +159,12 @@ function AircraftList() {
             />
           </Field>
           <Field label="Maximum take-off weight" hint="Kilograms">
-            <Input type="number" placeholder="79000" />
+            <Input
+              type="number"
+              value={mtow}
+              onChange={(event) => setMtow(event.target.value)}
+              placeholder="79000"
+            />
           </Field>
           <Field label="Operator">
             <Input value={operator.company} readOnly />

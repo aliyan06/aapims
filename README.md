@@ -78,8 +78,8 @@ src/
 
 | Path            | Description                                                           |
 | --------------- | --------------------------------------------------------------------- |
-| `/`             | Launcher (HERO entry point).                                          |
-| `/login`        | Mock login; selects a role and routes to its dashboard.               |
+| `/`             | Redirects to the sign-in page.                                        |
+| `/login`        | Mock login + MFA/OTP; selects a role and routes to its dashboard.     |
 | `/operator/*`   | Operator portal (dashboard, aircraft, documents, apply, permits, …).  |
 | `/authority/*`  | Authority portal (review, finance, technical, approval, audit, …).    |
 | `/verify`       | Public QR/reference verification (no login).                          |

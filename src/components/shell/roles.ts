@@ -20,6 +20,18 @@ export const ROLES: readonly Role[] = [
   "public",
 ];
 
+/** Roles grouped exactly as the specification lists them (features.md §1). */
+export const AUTHORITY_ROLES: readonly Role[] = ["superadmin", "reviewer", "approver", "finance"];
+
+export const CUSTOMER_ROLES: readonly Role[] = [
+  "operatorAdmin",
+  "permitOfficer",
+  "operatorFinance",
+  "viewer",
+];
+
+export const PUBLIC_ROLES: readonly Role[] = ["public"];
+
 export const ROLE_LABEL: Record<Role, string> = {
   operatorAdmin: "Operator Admin",
   permitOfficer: "Permit Officer",

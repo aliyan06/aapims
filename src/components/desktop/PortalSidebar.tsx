@@ -67,7 +67,9 @@ export function PortalSidebar({ portalLabel, items, footer }: PortalSidebarProps
           <span className="text-[10px] font-semibold uppercase tracking-wide text-white/45">
             Powered by
           </span>
-          <MoavinLogo className="h-5 w-auto brightness-0 invert" />
+          <span className="inline-flex items-center rounded bg-white px-1.5 py-1">
+            <MoavinLogo className="h-4 w-auto" />
+          </span>
         </div>
       </div>
     </aside>

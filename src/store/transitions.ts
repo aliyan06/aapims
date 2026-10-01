@@ -1,5 +1,7 @@
 import {
   STORY_IDS,
+  type AircraftRecord,
+  type AgentRecord,
   type ApplicationRecord,
   type ApplicationStatus,
   type AuditEntry,
@@ -853,4 +855,468 @@ export function payApplication(
   });
   notify(state, "finance", "PAYMENT", `Payment received for ${app.reference}.`);
   return done(label, `Paid ${app.finance.currency} ${total} for ${app.reference}.`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Operator registration & KYC (features.md �2)                        */
+/* ------------------------------------------------------------------ */
+
+export function submitRegistration(state: AppState): TransitionResult {
+  const label = "Submit registration";
+  const operator = state.world.operator;
+  if (operator.kycStatus === "SUBMITTED" || operator.kycStatus === "UNDER REVIEW") {
+    return fail(label, "Registration is already submitted for verification.");
+  }
+  if (operator.kycStatus === "ACTIVE") {
+    return fail(label, "This operator account is already active.");
+  }
+  operator.kycStatus = "SUBMITTED";
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: "Operator registration submitted",
+    status: "SUBMITTED",
+    applicationReference: operator.operatorId,
+    oldValue: "DRAFT",
+    newValue: "SUBMITTED",
+  });
+  notify(
+    state,
+    "reviewer",
+    "REGISTRATION",
+    `Operator ${operator.company} submitted registration for verification.`,
+  );
+  return done(label, "Registration submitted for verification.");
+}
+
+export function approveRegistration(state: AppState): TransitionResult {
+  const label = "Approve registration";
+  const operator = state.world.operator;
+  if (operator.kycStatus === "ACTIVE") {
+    return fail(label, "This operator account is already active.");
+  }
+  const previous = operator.kycStatus;
+  operator.kycStatus = "ACTIVE";
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: "Operator registration approved (KYC)",
+    status: "ACTIVE",
+    applicationReference: operator.operatorId,
+    oldValue: previous,
+    newValue: "ACTIVE",
+  });
+  notify(
+    state,
+    "customer",
+    "REGISTRATION",
+    `${operator.company} is now an active verified operator.`,
+  );
+  return done(label, `${operator.company} approved and activated.`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Agent registration & verification (features.md �3)                  */
+/* ------------------------------------------------------------------ */
+
+export function registerAgent(
+  state: AppState,
+  input: {
+    name: string;
+    agentId: string;
+    loaReference: string;
+    powerOfAttorney: string;
+    effectiveDate: string;
+    expiryDate: string;
+  },
+): TransitionResult {
+  const label = "Register agent";
+  if (!input.name.trim() || !input.agentId.trim()) {
+    return fail(label, "Agent name and agent ID are required.");
+  }
+  const record: AgentRecord = {
+    id: `ag-${input.agentId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    name: input.name.trim(),
+    agentId: input.agentId.trim(),
+    operatorId: state.world.operator.id,
+    authorization: "PENDING VERIFICATION",
+    loaReference: input.loaReference || "Pending",
+    powerOfAttorney: input.powerOfAttorney || "Pending",
+    effectiveDate: input.effectiveDate,
+    expiryDate: input.expiryDate,
+    status: "ACTIVE",
+  };
+  state.world.agents.push(record);
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: `Agent registered � ${record.name}`,
+    status: "PENDING VERIFICATION",
+    applicationReference: record.agentId,
+    oldValue: null,
+    newValue: record.agentId,
+  });
+  notify(
+    state,
+    "reviewer",
+    "AGENT",
+    `Agent ${record.name} was registered and awaits verification.`,
+  );
+  return {
+    ...done(label, `${record.name} registered and pending verification.`, "info"),
+    value: record.id,
+  };
+}
+
+export function verifyAgent(state: AppState, agentId: string): TransitionResult {
+  const label = "Verify agent";
+  const agent = state.world.agents.find((item) => item.id === agentId);
+  if (!agent) return fail(label, "Agent not found.");
+  agent.authorization = "VERIFIED";
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: `Agent verified � ${agent.name}`,
+    status: "VERIFIED",
+    applicationReference: agent.agentId,
+    oldValue: "PENDING VERIFICATION",
+    newValue: "VERIFIED",
+  });
+  notify(state, "customer", "AGENT", `Agent ${agent.name} authorization is verified.`);
+  return done(label, `${agent.name} verified.`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Aircraft registration (features.md �2)                              */
+/* ------------------------------------------------------------------ */
+
+export function registerAircraft(
+  state: AppState,
+  input: { registration: string; type: string; mtowKg: number },
+): TransitionResult {
+  const label = "Register aircraft";
+  if (!input.registration.trim() || !input.type.trim()) {
+    return fail(label, "Aircraft registration and type are required.");
+  }
+  if (
+    state.world.aircraft.some(
+      (item) => item.registration.toLowerCase() === input.registration.trim().toLowerCase(),
+    )
+  ) {
+    return fail(label, `Aircraft ${input.registration} is already registered.`);
+  }
+  const pending = {
+    status: "PENDING VERIFICATION" as const,
+    expiry: "2028-12-31",
+    reference: "Pending",
+  };
+  const record: AircraftRecord = {
+    id: `ac-${input.registration.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    operatorId: state.world.operator.id,
+    registration: input.registration.trim().toUpperCase(),
+    type: input.type.trim(),
+    mtowKg: input.mtowKg,
+    certificates: {
+      registration: { ...pending },
+      airworthiness: { ...pending },
+      insurance: { ...pending },
+      noise: { ...pending },
+    },
+  };
+  state.world.aircraft.push(record);
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: `Aircraft registered � ${record.registration}`,
+    status: "PENDING VERIFICATION",
+    applicationReference: record.registration,
+    oldValue: null,
+    newValue: record.registration,
+  });
+  return {
+    ...done(label, `${record.registration} registered and pending verification.`, "info"),
+    value: record.id,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Automated validation (features.md �9)                               */
+/* ------------------------------------------------------------------ */
+
+export function runApplicationValidation(state: AppState, applicationId: string): TransitionResult {
+  const label = "Run validation";
+  const app = findApplication(state, applicationId);
+  if (!app) return fail(label, "Application not found.");
+  const world = state.world;
+  const operator = world.operator;
+  const today = state.clock.iso.slice(0, 10);
+  const aircraft = world.aircraft.find((item) => item.id === app.aircraftId);
+  const docs = app.documentIds
+    .map((id) => world.documents.find((doc) => doc.id === id))
+    .filter((doc): doc is NonNullable<typeof doc> => Boolean(doc));
+  const agent = app.agentId ? world.agents.find((item) => item.id === app.agentId) : undefined;
+  const total = app.finance.permitFee + app.finance.processingFee;
+
+  const checks = [
+    {
+      id: "v-operator",
+      label: "Operator verified",
+      pass: operator.status === "VERIFIED",
+      detail: `${operator.operatorId} status ${operator.status}.`,
+    },
+    {
+      id: "v-aoc",
+      label: "AOC valid",
+      pass: operator.aocValidUntil >= today,
+      detail: `AOC valid until ${operator.aocValidUntil}.`,
+    },
+    {
+      id: "v-aircraft",
+      label: "Aircraft valid",
+      pass: Boolean(aircraft),
+      detail: aircraft ? `${aircraft.registration} on register.` : "Aircraft not found.",
+    },
+    {
+      id: "v-insurance",
+      label: "Insurance valid",
+      pass: aircraft ? aircraft.certificates.insurance.status === "VALID" : false,
+      detail: aircraft ? `Insurance ${aircraft.certificates.insurance.status}.` : "No aircraft.",
+    },
+    {
+      id: "v-docs",
+      label: "Required documents available",
+      pass:
+        docs.length === app.documentIds.length &&
+        docs.every((doc) => doc.status !== "EXPIRED" && doc.status !== "MISSING"),
+      detail: `${docs.length}/${app.documentIds.length} documents present.`,
+    },
+    {
+      id: "v-agent",
+      label: "Agent authorization valid",
+      pass: !app.agentId || (agent?.authorization === "VERIFIED" && agent.status === "ACTIVE"),
+      detail: app.agentId
+        ? agent
+          ? `${agent.name} ${agent.authorization}.`
+          : "Agent missing."
+        : "No agent used.",
+    },
+    {
+      id: "v-route",
+      label: "Route complete",
+      pass: Boolean(app.route.origin && app.route.destination),
+      detail: `${app.route.origin} to ${app.route.destination}.`,
+    },
+    {
+      id: "v-entry",
+      label: "Entry point provided",
+      pass: Boolean(app.route.entryPoint),
+      detail: app.route.entryPoint || "Missing.",
+    },
+    {
+      id: "v-exit",
+      label: "Exit point provided",
+      pass: Boolean(app.route.exitPoint),
+      detail: app.route.exitPoint || "Missing.",
+    },
+    {
+      id: "v-schedule",
+      label: "Schedule complete",
+      pass: Boolean(app.route.departureAt && app.route.arrivalAt),
+      detail: "Departure and arrival set.",
+    },
+    {
+      id: "v-duplicate",
+      label: "Duplicate application check",
+      pass: !world.applications.some(
+        (other) =>
+          other.id !== app.id &&
+          other.flight.flightNumber.toLowerCase() === app.flight.flightNumber.toLowerCase() &&
+          other.route.departureAt.slice(0, 10) === app.route.departureAt.slice(0, 10) &&
+          other.status !== "REJECTED" &&
+          other.status !== "ARCHIVED",
+      ),
+      detail: "No overlapping application for this flight and date.",
+    },
+    {
+      id: "v-financial",
+      label: "Financial eligibility check",
+      pass: app.finance.paymentStatus === "PAID" || world.wallet.balance >= total,
+      detail:
+        app.finance.paymentStatus === "PAID"
+          ? "Fees paid."
+          : `Wallet balance ${world.wallet.balance} / required ${total}.`,
+    },
+  ];
+
+  app.validation = checks.map((check) => ({
+    id: check.id,
+    label: check.label,
+    outcome: check.pass ? "PASS" : "WARNING",
+    detail: check.detail,
+  }));
+  const failed = app.validation.filter((check) => check.outcome !== "PASS").length;
+  app.validationResult = failed === 0 ? "PASS" : "WARNING";
+  return {
+    ...done(
+      label,
+      failed === 0 ? "All checks passed." : `${failed} check(s) need attention.`,
+      failed === 0 ? "success" : "info",
+    ),
+    value: app.validationResult,
+  };
+}
+
+export function validateApplication(state: AppState, applicationId: string): TransitionResult {
+  const label = "Validate application";
+  const app = findApplication(state, applicationId);
+  if (!app) return fail(label, "Application not found.");
+  if (app.status === "SUBMITTED") {
+    setStatus(
+      app,
+      "UNDER REVIEW",
+      state.clock.iso,
+      STORY_IDS.reviewer,
+      "reviewer",
+      "Application validated.",
+    );
+    adjust(state, "newApplications", -1);
+    adjust(state, "underReview", 1);
+  }
+  addAudit(state, {
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: "Application validated",
+    status: app.status,
+    applicationReference: app.reference,
+    oldValue: "SUBMITTED",
+    newValue: app.status,
+  });
+  return done(label, `${app.reference} validated and moved to review.`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Archive, activate, expiry reminder (features.md �17/�19)            */
+/* ------------------------------------------------------------------ */
+
+export function archiveApplication(state: AppState, applicationId: string): TransitionResult {
+  const label = "Archive application";
+  const app = findApplication(state, applicationId);
+  if (!app) return fail(label, "Application not found.");
+  if (app.status === "ARCHIVED") return fail(label, "Application is already archived.");
+  const previous = app.status;
+  setStatus(
+    app,
+    "ARCHIVED",
+    state.clock.iso,
+    STORY_IDS.operatorActor,
+    "operatorAdmin",
+    "Application archived.",
+  );
+  adjust(state, counterKeyFor(previous), -1);
+  addAudit(state, {
+    actor: STORY_IDS.operatorActor,
+    role: "operatorAdmin",
+    action: "Application archived",
+    status: "ARCHIVED",
+    applicationReference: app.reference,
+    oldValue: previous,
+    newValue: "ARCHIVED",
+  });
+  return done(label, `${app.reference} archived.`, "info");
+}
+
+export function activatePermit(state: AppState, permitId: string): TransitionResult {
+  const label = "Activate permit";
+  const permit = state.world.permits.find(
+    (item) => item.id === permitId || item.permitNumber === permitId,
+  );
+  if (!permit) return fail(label, "Permit not found.");
+  if (permit.status !== "ISSUED" && permit.status !== "REISSUED") {
+    return fail(label, "Only an issued permit can be activated.");
+  }
+  permit.status = "ACTIVE";
+  const app = state.world.applications.find(
+    (item) => item.reference === permit.applicationReference,
+  );
+  if (app) {
+    app.status = "ACTIVE";
+    app.history.push({
+      status: "ACTIVE",
+      at: state.clock.iso,
+      by: STORY_IDS.approver,
+      role: "approver",
+      note: "Permit activated.",
+    });
+  }
+  addAudit(state, {
+    actor: STORY_IDS.approver,
+    role: "approver",
+    action: `Permit activated � ${permit.permitNumber}`,
+    status: "ACTIVE",
+    applicationReference: permit.applicationReference,
+    oldValue: "ISSUED",
+    newValue: "ACTIVE",
+  });
+  notify(state, "customer", "PERMIT", `Permit ${permit.permitNumber} is active.`);
+  return done(label, `Permit ${permit.permitNumber} activated.`);
+}
+
+export function sendPermitExpiryReminder(state: AppState, permitId: string): TransitionResult {
+  const label = "Send expiry reminder";
+  const permit = state.world.permits.find(
+    (item) => item.id === permitId || item.permitNumber === permitId,
+  );
+  if (!permit) return fail(label, "Permit not found.");
+  notify(
+    state,
+    "customer",
+    "EXPIRING",
+    `Permit ${permit.permitNumber} expires on ${permit.validUntil}.`,
+  );
+  addAudit(state, {
+    actor: STORY_IDS.approver,
+    role: "approver",
+    action: `Expiry reminder sent � ${permit.permitNumber}`,
+    status: permit.status,
+    applicationReference: permit.applicationReference,
+    oldValue: null,
+    newValue: permit.validUntil,
+  });
+  return done(label, `Expiry reminder sent for ${permit.permitNumber}.`, "info");
+}
+
+/* ------------------------------------------------------------------ */
+/* Billing model (features.md �12)                                     */
+/* ------------------------------------------------------------------ */
+
+export function setBillingModel(
+  state: AppState,
+  applicationId: string,
+  model: "Prepaid / Advance Deposit" | "Postpaid",
+): TransitionResult {
+  const label = "Set billing model";
+  const app = findApplication(state, applicationId);
+  if (!app) return fail(label, "Application not found.");
+  const previous = app.finance.billingModel;
+  const total = app.finance.permitFee + app.finance.processingFee;
+  app.finance.billingModel = model;
+  if (model === "Postpaid") {
+    app.finance.invoiceNumber = app.finance.invoiceNumber ?? `INV-2026-${app.reference.slice(-3)}`;
+    app.finance.dueDate = app.finance.dueDate ?? state.clock.iso.slice(0, 10);
+    app.finance.outstanding = app.finance.paymentStatus === "PAID" ? 0 : total;
+  } else {
+    app.finance.invoiceNumber = undefined;
+    app.finance.dueDate = undefined;
+    app.finance.outstanding = app.finance.paymentStatus === "PAID" ? 0 : total;
+  }
+  addAudit(state, {
+    actor: STORY_IDS.financeOfficer,
+    role: "finance",
+    action: `Billing model set � ${model}`,
+    status: model,
+    applicationReference: app.reference,
+    oldValue: previous,
+    newValue: model,
+  });
+  return done(label, `${app.reference} set to ${model}.`, "info");
 }

@@ -28,6 +28,7 @@ export const FLIGHT_CATEGORIES: readonly FlightCategory[] = [
   "Search & Rescue",
   "Air Ambulance / Medical Evacuation",
   "Ferry / Test / Delivery",
+  "Relief / Humanitarian",
 ];
 
 export const DOCUMENT_STATUSES: readonly DocumentStatus[] = [
@@ -65,4 +66,5 @@ export const SPECIAL_DOCUMENT_CATEGORIES: readonly FlightCategory[] = [
   "Humanitarian / Emergency",
   "Military / Diplomatic",
   "Search & Rescue",
+  "Relief / Humanitarian",
 ];

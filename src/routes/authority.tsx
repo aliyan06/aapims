@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { DeviceStage } from "@/components/shell/DeviceStage";
 import { PermissionGate, type PermissionRule } from "@/components/shell/PermissionGate";
@@ -9,8 +8,16 @@ import { useActiveRole, useAppStore } from "@/store";
 
 export const Route = createFileRoute("/authority")({
   beforeLoad: ({ location }) => {
+    const store = useAppStore.getState();
+    if (!store.meta.signedIn) {
+      throw redirect({ to: "/login" });
+    }
     if (location.pathname === "/authority" || location.pathname === "/authority/") {
       throw redirect({ to: "/authority/dashboard" });
+    }
+    // Default the role only when entering the portal, never on later switches.
+    if (!isAuthorityRole(store.meta.activeRole)) {
+      store.setActiveRole("reviewer");
     }
   },
   component: AuthorityLayout,
@@ -23,6 +30,7 @@ const AUTHORITY_RULES: PermissionRule[] = [
   { prefix: "/authority/finance", permission: "finance.verify" },
   { prefix: "/authority/approval", permission: "permit.approve" },
   { prefix: "/authority/permits", permission: "permit.view" },
+  { prefix: "/authority/review", permission: "app.review" },
   { prefix: "/authority/audit", permission: "audit.view" },
   { prefix: "/authority/roles", permission: "roles.manage" },
   { prefix: "/authority/search", permission: "app.view" },
@@ -34,14 +42,6 @@ function resolveAuthorityRole(role: Role): Role {
 
 function AuthorityLayout() {
   const activeRole = useActiveRole();
-  const setActiveRole = useAppStore((s) => s.setActiveRole);
-
-  useEffect(() => {
-    if (!isAuthorityRole(activeRole)) {
-      setActiveRole("reviewer");
-    }
-  }, [activeRole, setActiveRole]);
-
   const role = resolveAuthorityRole(activeRole);
 
   return (

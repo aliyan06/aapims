@@ -57,6 +57,7 @@ export const APPLICATION_STATUS_TONE: Record<ApplicationStatus, StatusTone> = {
   "AWAITING FINAL APPROVAL": "awaiting",
   APPROVED: "approved",
   ISSUED: "issued",
+  ACTIVE: "issued",
   "REVISION REQUESTED": "revision",
   REISSUED: "issued",
   REJECTED: "rejected",

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, ClipboardCheck, Info, RotateCcw, ThumbsUp } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  Info,
+  RotateCcw,
+  ShieldCheck,
+  ThumbsUp,
+} from "lucide-react";
 import {
   ApplicationStatusBadge,
   Checklist,
@@ -11,7 +19,7 @@ import {
 import { ApplicationSections } from "@/components/authority/ApplicationSections";
 import { DocumentVerification } from "@/components/authority/DocumentVerification";
 import { Button } from "@/components/ui/button";
-import { useAppStore, useApplication } from "@/store";
+import { useAppStore, useApplication, usePermission } from "@/store";
 
 import { RequirePermission } from "@/components/shell/RequirePermission";
 
@@ -55,6 +63,8 @@ function ReviewerWorkspace() {
   const recommendApproval = useAppStore((s) => s.recommendApproval);
   const requestInformation = useAppStore((s) => s.requestInformation);
   const returnApplication = useAppStore((s) => s.returnApplication);
+  const validateApplication = useAppStore((s) => s.validateApplication);
+  const canValidate = usePermission("app.review");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!application) {
@@ -94,6 +104,15 @@ function ReviewerWorkspace() {
           >
             {canReview ? (
               <div className="space-y-3">
+                {application.status === "SUBMITTED" && canValidate ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => validateApplication(application.id)}
+                  >
+                    <ShieldCheck size={15} /> Validate Application
+                  </Button>
+                ) : null}
                 <Button className="w-full" onClick={() => setConfirmOpen(true)}>
                   <ThumbsUp size={15} /> Recommend Approval
                 </Button>

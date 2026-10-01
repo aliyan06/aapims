@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   Building2,
@@ -15,7 +15,7 @@ import {
 import { PortalSidebar, type SidebarItem } from "@/components/desktop";
 import { ROLE_LABEL } from "@/components/shell/roles";
 import { isCustomerRole, roleHasPermission } from "@/lib/rbac";
-import { roleToAudience, useActiveRole, useOperator, useUnreadCount } from "@/store";
+import { roleToAudience, useActiveRole, useAppStore, useOperator, useUnreadCount } from "@/store";
 import { cn } from "@/lib/utils";
 
 /** Status pill shown in the sidebar footer, driven by the operator record. */
@@ -26,6 +26,8 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function OperatorSidebar() {
+  const navigate = useNavigate();
+  const signOut = useAppStore((state) => state.signOut);
   const activeRole = useActiveRole();
   const role = isCustomerRole(activeRole) ? activeRole : "operatorAdmin";
   const operator = useOperator();
@@ -77,13 +79,17 @@ export function OperatorSidebar() {
         </span>
         <span className="text-[10px] font-semibold text-white/50">{operator.operatorId}</span>
       </div>
-      <Link
-        to="/login"
+      <button
+        type="button"
+        onClick={() => {
+          signOut();
+          navigate({ to: "/login" });
+        }}
         className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-white/60 transition-colors hover:text-white"
       >
         <LogOut size={13} />
         Sign out
-      </Link>
+      </button>
     </div>
   );
 

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
 import { AapimsBrand, MoavinLogo } from "@/components/desktop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ type Step = "credentials" | "otp";
 
 function LoginScreen() {
   const navigate = useNavigate();
-  const setActiveRole = useAppStore((s) => s.setActiveRole);
+  const signIn = useAppStore((s) => s.signIn);
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,7 +54,7 @@ function LoginScreen() {
       return;
     }
     setError(null);
-    setActiveRole(pending.role);
+    signIn(pending.role);
     void navigate({ to: ROLE_HOME[pending.role] });
   }
 
@@ -114,20 +114,14 @@ function LoginScreen() {
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">
             Powered by
           </span>
-          <MoavinLogo className="h-6 w-auto brightness-0 invert opacity-90" />
+          <span className="inline-flex items-center rounded bg-white px-2 py-1.5">
+            <MoavinLogo className="h-5 w-auto" />
+          </span>
         </div>
       </aside>
 
       <main className="flex flex-1 items-center justify-center px-6 py-10">
-        <div className="w-full max-w-md">
-          <Link
-            to="/"
-            className="mb-6 inline-flex items-center gap-1.5 text-[12px] font-semibold text-text-muted transition-colors hover:text-accent"
-          >
-            <ArrowLeft size={14} />
-            Back to launcher
-          </Link>
-
+        <div className="w-full max-w-2xl">
           <div className="rounded-2xl border border-border-soft bg-surface p-7 shadow-card">
             <div className="lg:hidden">
               <AapimsBrand />
@@ -270,42 +264,44 @@ function LoginScreen() {
                 <span className="text-[11px] text-text-subtle">Password {`demo123`}</span>
               </div>
 
-              {[
-                { label: "Authority Side", accounts: authorityAccounts },
-                { label: "Customer Side", accounts: customerAccounts },
-              ].map((group) => (
-                <div key={group.label} className="mt-4">
-                  <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">
-                    {group.label}
-                  </div>
-                  <div className="space-y-2">
-                    {group.accounts.map((account) => (
-                      <button
-                        key={account.role}
-                        type="button"
-                        onClick={() => {
-                          setEmail(account.email);
-                          setPassword(account.password);
-                          authenticate(account.email, account.password);
-                        }}
-                        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-muted/40 px-3.5 py-2.5 text-left transition-colors hover:border-accent/50 hover:bg-info-soft/50"
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate text-[13px] font-bold text-text-dark">
-                            {ROLE_LABEL[account.role]}
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                {[
+                  { label: "Authority Side", accounts: authorityAccounts },
+                  { label: "Customer Side", accounts: customerAccounts },
+                ].map((group) => (
+                  <div key={group.label}>
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">
+                      {group.label}
+                    </div>
+                    <div className="space-y-2">
+                      {group.accounts.map((account) => (
+                        <button
+                          key={account.role}
+                          type="button"
+                          onClick={() => {
+                            setEmail(account.email);
+                            setPassword(account.password);
+                            authenticate(account.email, account.password);
+                          }}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-muted/40 px-3.5 py-2.5 text-left transition-colors hover:border-accent/50 hover:bg-info-soft/50"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-[13px] font-bold text-text-dark">
+                              {ROLE_LABEL[account.role]}
+                            </div>
+                            <div className="truncate text-[11px] text-text-muted">
+                              {account.displayName} · {account.email}
+                            </div>
                           </div>
-                          <div className="truncate text-[11px] text-text-muted">
-                            {account.displayName} · {account.email}
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-[11px] font-semibold text-text-subtle">
-                          Use
-                        </span>
-                      </button>
-                    ))}
+                          <span className="shrink-0 text-[11px] font-semibold text-text-subtle">
+                            Use
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 

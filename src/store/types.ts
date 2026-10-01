@@ -12,6 +12,8 @@ export type ToastPayload = {
 export type MetaState = {
   activeRole: Role;
   currentScene: string;
+  /** Mock authenticated session (features.md §1/§20). */
+  signedIn: boolean;
 };
 
 export type ClockState = {
@@ -45,9 +47,26 @@ export type RequestRevisionInput = {
   reason: string;
 };
 
+export type RegisterAgentInput = {
+  name: string;
+  agentId: string;
+  loaReference: string;
+  powerOfAttorney: string;
+  effectiveDate: string;
+  expiryDate: string;
+};
+
+export type RegisterAircraftInput = {
+  registration: string;
+  type: string;
+  mtowKg: number;
+};
+
 export type AppActions = {
   /* Demo / presenter */
   setActiveRole: (role: Role) => void;
+  signIn: (role: Role) => void;
+  signOut: () => void;
   jumpToScene: (sceneId: string) => string;
   resetDemo: () => void;
   pushToast: (toast: Omit<ToastPayload, "id">) => void;
@@ -87,6 +106,24 @@ export type AppActions = {
   /* Permit status */
   revokePermit: (permitId: string, reason: string) => boolean;
   expirePermit: (permitId: string) => boolean;
+  activatePermit: (permitId: string) => boolean;
+  archiveApplication: (applicationId: string) => boolean;
+  sendPermitExpiryReminder: (permitId: string) => boolean;
+
+  /* Registration & operator management */
+  submitRegistration: () => boolean;
+  approveRegistration: () => boolean;
+  registerAgent: (input: RegisterAgentInput) => boolean;
+  verifyAgent: (agentId: string) => boolean;
+  registerAircraft: (input: RegisterAircraftInput) => boolean;
+
+  /* Validation & billing */
+  runApplicationValidation: (applicationId: string) => boolean;
+  validateApplication: (applicationId: string) => boolean;
+  setBillingModel: (
+    applicationId: string,
+    model: "Prepaid / Advance Deposit" | "Postpaid",
+  ) => boolean;
 };
 
 export type AppStore = AppState & AppActions;

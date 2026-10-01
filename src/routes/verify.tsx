@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ScanLine, Search } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { ScanLine, Search } from "lucide-react";
 import { AapimsBrand, Field, MoavinLogo, SectionCard } from "@/components/desktop";
 import { DeviceStage } from "@/components/shell/DeviceStage";
 import { ROLE_DESKTOP_URL } from "@/components/shell/roles";
@@ -93,13 +93,6 @@ function VerifyScreen() {
           </div>
           <div className="flex shrink-0 items-center gap-4">
             <MoavinLogo className="h-6 w-auto" />
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-text-muted transition-colors hover:text-accent"
-            >
-              <ArrowLeft size={14} />
-              Back to launcher
-            </Link>
           </div>
         </header>
 

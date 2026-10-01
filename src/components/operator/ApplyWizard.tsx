@@ -45,11 +45,10 @@ import {
   PERMIT_KINDS,
   SPECIAL_DOCUMENT_CATEGORIES,
   STORY_IDS,
-  type FinancialClearance,
   type FlightCategory,
-  type PaymentStatus,
   type PermitAuthorization,
   type PermitKind,
+  type ValidationOutcome,
 } from "@/data";
 import {
   formatDate,
@@ -75,8 +74,6 @@ const STEPS = [
   "Payment",
   "Review & Submit",
 ] as const;
-
-type PaymentMethod = "Advance Deposit / Wallet" | "Online Payment";
 
 type WizardForm = {
   authorization: PermitAuthorization;
@@ -122,6 +119,28 @@ function optionClass(active: boolean): string {
   );
 }
 
+function validationBannerClasses(outcome: ValidationOutcome): string {
+  switch (outcome) {
+    case "PASS":
+      return "border-status-cleared/30 bg-success-soft";
+    case "WARNING":
+      return "border-status-awaiting/30 bg-warning-soft";
+    case "BLOCKER":
+      return "border-status-rejected/30 bg-danger-soft";
+  }
+}
+
+function validationIconClasses(outcome: ValidationOutcome): string {
+  switch (outcome) {
+    case "PASS":
+      return "text-status-cleared";
+    case "WARNING":
+      return "text-status-awaiting";
+    case "BLOCKER":
+      return "text-status-rejected";
+  }
+}
+
 export function ApplyWizard() {
   const navigate = useNavigate();
   const application = useApplication(STORY_IDS.application);
@@ -131,12 +150,12 @@ export function ApplyWizard() {
   const wallet = useWallet();
   const authority = useAuthority();
   const submitApplication = useAppStore((s) => s.submitApplication);
+  const payApplication = useAppStore((s) => s.payApplication);
+  const runApplicationValidation = useAppStore((s) => s.runApplicationValidation);
   const pushToast = useAppStore((s) => s.pushToast);
 
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
-  const [paid, setPaid] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [form, setForm] = useState<WizardForm>(() => ({
     authorization: application?.authorization ?? "OVERFLIGHT",
     permitKind: application?.permitKind ?? "SINGLE PERMIT",
@@ -199,6 +218,10 @@ export function ApplyWizard() {
   const currency = application.finance.currency;
   const total = permitFee + processingFee;
   const remainingBalance = wallet.balance - total;
+  const paymentStatus = application.finance.paymentStatus;
+  const clearance = application.finance.financialClearance;
+  const storedPaymentMethod = application.finance.paymentMethod;
+  const isPaid = paymentStatus === "PAID";
 
   const setField = <K extends keyof WizardForm>(key: K, value: WizardForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -230,6 +253,14 @@ export function ApplyWizard() {
       description: `${application.reference} is no longer a draft.`,
       tone: "info",
     });
+  };
+
+  const handleRunValidation = () => {
+    runApplicationValidation(STORY_IDS.application);
+  };
+
+  const handlePay = (method: "wallet" | "online") => {
+    payApplication(STORY_IDS.application, method);
   };
 
   const goNext = () => setStep((current) => Math.min(current + 1, STEPS.length - 1));
@@ -798,22 +829,28 @@ export function ApplyWizard() {
               title="Validation"
               description="Automated checks run against the operator, aircraft, route and documents."
               actions={
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    pushToast({
-                      title: "Validation complete",
-                      description: "All checks passed. The application is ready to submit.",
-                      tone: "success",
-                    })
-                  }
-                >
+                <Button variant="outline" onClick={handleRunValidation}>
                   <RefreshCw size={15} /> Run validation
                 </Button>
               }
             >
-              <div className="mb-4 flex items-center gap-3 rounded-xl border border-status-cleared/30 bg-success-soft px-4 py-3">
-                <BadgeCheck size={20} className="text-status-cleared" />
+              <div
+                className={cn(
+                  "mb-4 flex items-center gap-3 rounded-xl border px-4 py-3",
+                  validationBannerClasses(application.validationResult),
+                )}
+              >
+                {application.validationResult === "PASS" ? (
+                  <BadgeCheck
+                    size={20}
+                    className={validationIconClasses(application.validationResult)}
+                  />
+                ) : (
+                  <AlertTriangle
+                    size={20}
+                    className={validationIconClasses(application.validationResult)}
+                  />
+                )}
                 <div>
                   <p className="text-[13px] font-bold text-text-dark">
                     Overall result: {application.validationResult}
@@ -875,26 +912,34 @@ export function ApplyWizard() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 pt-1">
-                    <PaymentBadge status={(paid ? "PAID" : "UNPAID") as PaymentStatus} />
-                    <ClearanceBadge
-                      status={(paid ? "CLEARED" : "PENDING CLEARANCE") as FinancialClearance}
-                    />
+                    <PaymentBadge status={paymentStatus} />
+                    <ClearanceBadge status={clearance} />
                   </div>
                 </div>
 
                 <div className="space-y-3">
+                  {isPaid ? (
+                    <div className="flex items-start gap-3 rounded-xl border border-status-cleared/30 bg-success-soft px-4 py-3">
+                      <BadgeCheck size={18} className="mt-0.5 shrink-0 text-status-cleared" />
+                      <div>
+                        <p className="text-[13px] font-bold text-text-dark">Fees paid</p>
+                        <p className="mt-0.5 text-[12px] text-text-muted">
+                          {currency} {total.toLocaleString()} settled
+                          {storedPaymentMethod ? ` via ${storedPaymentMethod}` : ""}. Payment
+                          options are disabled because this application is already paid.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => {
-                      setPaymentMethod("Advance Deposit / Wallet");
-                      setPaid(true);
-                      pushToast({
-                        title: "Paid from wallet",
-                        description: `${currency} ${total.toLocaleString()} debited. Financial clearance set to CLEARED.`,
-                        tone: "success",
-                      });
-                    }}
-                    className={optionClass(paymentMethod === "Advance Deposit / Wallet")}
+                    disabled={isPaid}
+                    onClick={() => handlePay("wallet")}
+                    className={cn(
+                      optionClass(storedPaymentMethod === "Advance Deposit / Wallet"),
+                      isPaid &&
+                        "cursor-not-allowed opacity-60 hover:border-border-soft hover:bg-surface",
+                    )}
                   >
                     <span className="flex items-center gap-2 text-[13px] font-bold text-text-dark">
                       <Wallet size={16} className="text-accent" /> Advance Deposit / Wallet
@@ -909,16 +954,13 @@ export function ApplyWizard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setPaymentMethod("Online Payment");
-                      setPaid(true);
-                      pushToast({
-                        title: "Payment received",
-                        description: `${currency} ${total.toLocaleString()} paid online. Financial clearance set to CLEARED.`,
-                        tone: "success",
-                      });
-                    }}
-                    className={optionClass(paymentMethod === "Online Payment")}
+                    disabled={isPaid}
+                    onClick={() => handlePay("online")}
+                    className={cn(
+                      optionClass(storedPaymentMethod === "Online Payment"),
+                      isPaid &&
+                        "cursor-not-allowed opacity-60 hover:border-border-soft hover:bg-surface",
+                    )}
                   >
                     <span className="flex items-center gap-2 text-[13px] font-bold text-text-dark">
                       <CreditCard size={16} className="text-accent" /> Online Payment (demo)
@@ -1075,7 +1117,13 @@ export function ApplyWizard() {
               </SectionCard>
 
               <SectionCard title="Validation" description="Automated compliance checks.">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-[12px] font-bold text-status-cleared">
+                <div
+                  className={cn(
+                    "mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-bold",
+                    validationBannerClasses(application.validationResult),
+                    validationIconClasses(application.validationResult),
+                  )}
+                >
                   <FileCheck2 size={14} /> Overall {application.validationResult}
                 </div>
                 <Checklist
@@ -1090,10 +1138,8 @@ export function ApplyWizard() {
 
               <SectionCard title="Financial" description="Fees and settlement status.">
                 <div className="mb-4 flex items-center gap-2">
-                  <PaymentBadge status={(paid ? "PAID" : "UNPAID") as PaymentStatus} />
-                  <ClearanceBadge
-                    status={(paid ? "CLEARED" : "PENDING CLEARANCE") as FinancialClearance}
-                  />
+                  <PaymentBadge status={paymentStatus} />
+                  <ClearanceBadge status={clearance} />
                   <ValidationBadge outcome={application.validationResult} />
                 </div>
                 <DescriptionList
@@ -1105,9 +1151,9 @@ export function ApplyWizard() {
                       value: `${currency} ${processingFee.toLocaleString()}`,
                     },
                     { label: "Total", value: `${currency} ${total.toLocaleString()}` },
-                    { label: "Payment method", value: paymentMethod ?? "Not selected" },
-                    { label: "Payment status", value: paid ? "PAID" : "UNPAID" },
-                    { label: "Clearance", value: paid ? "CLEARED" : "PENDING CLEARANCE" },
+                    { label: "Payment method", value: storedPaymentMethod ?? "Not selected" },
+                    { label: "Payment status", value: paymentStatus },
+                    { label: "Clearance", value: clearance },
                   ]}
                 />
               </SectionCard>

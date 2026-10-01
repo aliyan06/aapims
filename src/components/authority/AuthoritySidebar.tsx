@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   BadgeCheck,
   Bell,
@@ -15,7 +15,7 @@ import {
 import { PortalSidebar, type SidebarItem } from "@/components/desktop";
 import { ROLE_LABEL, isAuthorityRole } from "@/components/shell/roles";
 import { roleHasPermission, type PermissionKey } from "@/lib/rbac";
-import { roleToAudience, useActiveRole, useAuthority, useUnreadCount } from "@/store";
+import { roleToAudience, useActiveRole, useAppStore, useAuthority, useUnreadCount } from "@/store";
 
 type NavEntry = {
   item: SidebarItem;
@@ -24,6 +24,8 @@ type NavEntry = {
 
 /** Left navigation for the Authority Portal, scoped to the active authority role's permissions. */
 export function AuthoritySidebar() {
+  const navigate = useNavigate();
+  const signOut = useAppStore((state) => state.signOut);
   const activeRole = useActiveRole();
   const authority = useAuthority();
 
@@ -35,6 +37,10 @@ export function AuthoritySidebar() {
     {
       item: { label: "Applications", to: "/authority/applications", icon: FileText },
       permission: "app.view",
+    },
+    {
+      item: { label: "Permit Review", to: "/authority/review", icon: ClipboardCheck },
+      permission: "app.review",
     },
     {
       item: { label: "Search", to: "/authority/search", icon: Search },
@@ -49,7 +55,7 @@ export function AuthoritySidebar() {
       permission: "finance.verify",
     },
     {
-      item: { label: "Approval", to: "/authority/approval", icon: BadgeCheck },
+      item: { label: "Permit Approval", to: "/authority/approval", icon: BadgeCheck },
       permission: "permit.approve",
     },
     {
@@ -79,13 +85,17 @@ export function AuthoritySidebar() {
       <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/50">
         {ROLE_LABEL[role]}
       </div>
-      <Link
-        to="/login"
+      <button
+        type="button"
+        onClick={() => {
+          signOut();
+          navigate({ to: "/login" });
+        }}
         className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-white/60 transition-colors hover:text-white"
       >
         <LogOut size={13} />
         Sign out
-      </Link>
+      </button>
     </div>
   );
 

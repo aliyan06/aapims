@@ -13,8 +13,11 @@ import {
   requestInformation,
   requestRevision,
   submitApplication,
+  submitRegistration,
   suspendAgent,
   verifyDocument,
+  registerAircraft,
+  activatePermit,
 } from "./transitions";
 
 const APP = STORY_IDS.application;
@@ -131,6 +134,37 @@ describe("permit workflow transitions", () => {
     expect(payApplication(state, APP, "wallet").ok).toBe(true);
     expect(hero.finance.paymentStatus).toBe("PAID");
     expect(state.world.wallet.balance).toBe(before - 550);
+  });
+
+  it("submits operator registration for verification", () => {
+    const state = buildInitialState();
+    expect(state.world.operator.kycStatus).toBe("ACTIVE");
+    state.world.operator.kycStatus = "DRAFT";
+    expect(submitRegistration(state).ok).toBe(true);
+    expect(state.world.operator.kycStatus).toBe("SUBMITTED");
+  });
+
+  it("registers a new aircraft onto the operator account", () => {
+    const state = buildInitialState();
+    const before = state.world.aircraft.length;
+    expect(
+      registerAircraft(state, { registration: "A6-NEW", type: "Airbus A321neo", mtowKg: 97000 }).ok,
+    ).toBe(true);
+    expect(state.world.aircraft.length).toBe(before + 1);
+    expect(state.world.aircraft.some((item) => item.registration === "A6-NEW")).toBe(true);
+  });
+
+  it("activates an issued permit", () => {
+    const state = buildInitialState();
+    submitApplication(state, APP);
+    recommendApproval(state, APP);
+    clearFinancialHold(state, APP);
+    passTechnicalReview(state, APP);
+    approvePermit(state, APP);
+    issuePermit(state, APP);
+    expect(activatePermit(state, STORY_IDS.permit).ok).toBe(true);
+    const permit = state.world.permits.find((item) => item.permitNumber === STORY_IDS.permitNumber);
+    expect(permit?.status).toBe("ACTIVE");
   });
 
   it("rejects a permit from the approval stage", () => {

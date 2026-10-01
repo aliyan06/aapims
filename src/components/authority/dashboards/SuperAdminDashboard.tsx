@@ -1,18 +1,43 @@
-import { Activity, BadgeCheck, Building2, FileText, ShieldCheck, Users } from "lucide-react";
 import {
+  Activity,
+  BadgeCheck,
+  Building2,
+  FileText,
+  ShieldCheck,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import {
+  Checklist,
   DataTable,
+  DescriptionList,
   KpiTile,
   PortalPage,
   SectionCard,
   StatusBadge,
   Timeline,
+  type ChecklistItem,
   type Column,
   type TimelineStep,
 } from "@/components/desktop";
-import type { RbacRole, Role } from "@/data/types";
+import { Button } from "@/components/ui/button";
+import type { AgentRecord, OperatorRecord, RbacRole, Role, VerificationStatus } from "@/data/types";
 import { ROLE_PERMISSIONS } from "@/lib/rbac";
 import { DEMO_ACCOUNTS, ROLE_LABEL, type DemoAccount } from "@/components/shell/roles";
-import { formatDateTime, useApplications, useAudit, usePermits, useRbacRoles } from "@/store";
+import {
+  formatDate,
+  formatDateTime,
+  useAgents,
+  useAppStore,
+  useApplications,
+  useAudit,
+  useClockIso,
+  useOperator,
+  usePermits,
+  usePermission,
+  useRbacRoles,
+} from "@/store";
+import type { StatusTone } from "@/lib/status";
 
 /**
  * Maps an RBAC role definition key (data layer) to the coarse `Role` used by
@@ -37,11 +62,97 @@ const ROLE_SIDES: readonly {
   { side: "Customer Side", description: "Operator and applicant accounts." },
 ];
 
+const KYC_TONE: Record<OperatorRecord["kycStatus"], StatusTone> = {
+  DRAFT: "draft",
+  SUBMITTED: "submitted",
+  "UNDER REVIEW": "review",
+  APPROVED: "approved",
+  ACTIVE: "issued",
+};
+
+const AUTHORIZATION_TONE: Record<VerificationStatus, StatusTone> = {
+  VERIFIED: "approved",
+  "PENDING VERIFICATION": "submitted",
+  REJECTED: "rejected",
+};
+
 export function SuperAdminDashboard() {
   const applications = useApplications();
   const permits = usePermits();
   const audit = useAudit();
   const roles = useRbacRoles();
+  const operator = useOperator();
+  const agents = useAgents();
+  const clockIso = useClockIso();
+  const canManage = usePermission("user.manage");
+  const approveRegistration = useAppStore((s) => s.approveRegistration);
+  const verifyAgent = useAppStore((s) => s.verifyAgent);
+
+  const today = clockIso.slice(0, 10);
+  const kycReviewed = operator.kycStatus === "APPROVED" || operator.kycStatus === "ACTIVE";
+  const kycChecks: ChecklistItem[] = [
+    {
+      id: "kyc-profile",
+      label: "Company profile complete",
+      detail: `${operator.company} · ${operator.operatorId}`,
+      done: Boolean(operator.company && operator.contactEmail),
+    },
+    {
+      id: "kyc-aoc",
+      label: "AOC valid",
+      detail: `${operator.aocNumber} — valid until ${formatDate(operator.aocValidUntil)}`,
+      done: operator.aocValidUntil >= today,
+    },
+    {
+      id: "kyc-documents",
+      label: "KYC documents verified",
+      detail: "Identity, ownership and certification documents checked.",
+      done: kycReviewed,
+    },
+    {
+      id: "kyc-approved",
+      label: "Registration approved",
+      detail: "Operator account activated for permit applications.",
+      done: operator.kycStatus === "ACTIVE",
+    },
+  ];
+
+  const agentColumns: Column<AgentRecord>[] = [
+    {
+      key: "name",
+      header: "Agent",
+      cell: (agent) => <span className="font-semibold text-text-dark">{agent.name}</span>,
+    },
+    { key: "agentId", header: "Agent ID", cell: (agent) => agent.agentId },
+    {
+      key: "authorization",
+      header: "Authorization",
+      cell: (agent) => (
+        <StatusBadge label={agent.authorization} tone={AUTHORIZATION_TONE[agent.authorization]} />
+      ),
+    },
+    { key: "loa", header: "LoA reference", cell: (agent) => agent.loaReference },
+    {
+      key: "validUntil",
+      header: "Valid until",
+      cell: (agent) => formatDate(agent.expiryDate),
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      cell: (agent) => (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!canManage || agent.authorization === "VERIFIED"}
+          onClick={() => verifyAgent(agent.id)}
+        >
+          <UserCheck size={14} /> Verify
+        </Button>
+      ),
+    },
+  ];
 
   const registeredOperators = new Set(applications.map((application) => application.operatorId))
     .size;
@@ -127,6 +238,58 @@ export function SuperAdminDashboard() {
             tone="warning"
           />
         </div>
+
+        <SectionCard
+          title="Operator verification (KYC)"
+          description="Review the operator registration and activate the account once every KYC check passes."
+        >
+          <div className="grid gap-5 lg:grid-cols-2">
+            <DescriptionList
+              columns={2}
+              items={[
+                { label: "Operator", value: operator.company },
+                {
+                  label: "KYC status",
+                  value: (
+                    <StatusBadge label={operator.kycStatus} tone={KYC_TONE[operator.kycStatus]} />
+                  ),
+                },
+                { label: "AOC number", value: operator.aocNumber },
+                { label: "Country", value: operator.country },
+              ]}
+            />
+            <Checklist items={kycChecks} />
+          </div>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border-soft pt-4">
+            <p className="text-[12px] text-text-muted">
+              {!canManage
+                ? "Your role has read-only access to operator verification."
+                : operator.kycStatus === "ACTIVE"
+                  ? "This operator account is already active."
+                  : "Approving activates the operator so permits can be applied for."}
+            </p>
+            <Button
+              disabled={!canManage || operator.kycStatus === "ACTIVE"}
+              onClick={() => approveRegistration()}
+            >
+              <ShieldCheck size={15} /> Approve &amp; activate
+            </Button>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Agent verification"
+          description="Authorised agents appointed by operators, with their Letter of Authorization and validity."
+          padded={false}
+        >
+          <DataTable
+            columns={agentColumns}
+            rows={agents}
+            getRowKey={(agent) => agent.id}
+            emptyTitle="No agents registered"
+            emptyDescription="Operators have not appointed any agents yet."
+          />
+        </SectionCard>
 
         <SectionCard
           title="Users"

@@ -45,6 +45,11 @@ export const useAppStore = create<AppStore>((set, get) => {
     /* Demo / presenter */
     setActiveRole: (role) => set((state) => ({ meta: { ...state.meta, activeRole: role } })),
 
+    signIn: (role) =>
+      set((state) => ({ meta: { ...state.meta, activeRole: role, signedIn: true } })),
+
+    signOut: () => set((state) => ({ meta: { ...state.meta, signedIn: false } })),
+
     jumpToScene: (sceneId) => {
       const scene = getScene(sceneId);
       if (!scene) return "/";
@@ -107,5 +112,23 @@ export const useAppStore = create<AppStore>((set, get) => {
     revokePermit: (permitId, reason) =>
       run((state) => transitions.revokePermit(state, permitId, reason)),
     expirePermit: (permitId) => run((state) => transitions.expirePermit(state, permitId)),
+    activatePermit: (permitId) => run((state) => transitions.activatePermit(state, permitId)),
+    archiveApplication: (applicationId) =>
+      run((state) => transitions.archiveApplication(state, applicationId)),
+    sendPermitExpiryReminder: (permitId) =>
+      run((state) => transitions.sendPermitExpiryReminder(state, permitId)),
+
+    submitRegistration: () => run((state) => transitions.submitRegistration(state)),
+    approveRegistration: () => run((state) => transitions.approveRegistration(state)),
+    registerAgent: (input) => run((state) => transitions.registerAgent(state, input)),
+    verifyAgent: (agentId) => run((state) => transitions.verifyAgent(state, agentId)),
+    registerAircraft: (input) => run((state) => transitions.registerAircraft(state, input)),
+
+    runApplicationValidation: (applicationId) =>
+      run((state) => transitions.runApplicationValidation(state, applicationId)),
+    validateApplication: (applicationId) =>
+      run((state) => transitions.validateApplication(state, applicationId)),
+    setBillingModel: (applicationId, model) =>
+      run((state) => transitions.setBillingModel(state, applicationId, model)),
   };
 });

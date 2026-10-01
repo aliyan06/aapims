@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { DeviceStage } from "@/components/shell/DeviceStage";
 import { PermissionGate, type PermissionRule } from "@/components/shell/PermissionGate";
@@ -9,8 +8,17 @@ import { useActiveRole, useAppStore } from "@/store";
 
 export const Route = createFileRoute("/operator")({
   beforeLoad: ({ location }) => {
+    const store = useAppStore.getState();
+    if (!store.meta.signedIn) {
+      throw redirect({ to: "/login" });
+    }
     if (location.pathname === "/operator" || location.pathname === "/operator/") {
       throw redirect({ to: "/operator/dashboard" });
+    }
+    // Default the role only when entering the portal, never on later switches
+    // (so the presenter can jump to another surface without being overridden).
+    if (!isCustomerRole(store.meta.activeRole)) {
+      store.setActiveRole("operatorAdmin");
     }
   },
   component: OperatorLayout,
@@ -35,14 +43,6 @@ function resolveCustomerRole(role: Role): Role {
 
 function OperatorLayout() {
   const activeRole = useActiveRole();
-  const setActiveRole = useAppStore((s) => s.setActiveRole);
-
-  useEffect(() => {
-    if (!isCustomerRole(activeRole)) {
-      setActiveRole("operatorAdmin");
-    }
-  }, [activeRole, setActiveRole]);
-
   const role = resolveCustomerRole(activeRole);
 
   return (
