@@ -1,0 +1,843 @@
+import {
+  STORY_IDS,
+  type AircraftRecord,
+  type AgentRecord,
+  type ApplicationRecord,
+  type AuditEntry,
+  type Counters,
+  type DemoWorld,
+  type DocumentRecord,
+  type FinanceDetails,
+  type NotificationRecord,
+  type OperatorRecord,
+  type PermitRecord,
+  type RbacPermission,
+  type RbacRole,
+  type ValidationCheck,
+} from "./types";
+
+/** The demo "today": 10 October 2026. */
+export const DEMO_NOW = "2026-10-10T09:00:00.000Z";
+export const OPERATION_DATE = "2026-10-15";
+
+type CounterKey = keyof Counters;
+
+export const operators: OperatorRecord[] = [
+  {
+    id: STORY_IDS.operator,
+    company: "Global Wings Aviation",
+    operatorId: "GWA-001",
+    country: "United Arab Emirates",
+    aocNumber: "AOC-UAE-45821",
+    aocValidUntil: "2027-12-31",
+    status: "VERIFIED",
+    kycStatus: "ACTIVE",
+    contactName: "Omar Al-Farsi",
+    contactEmail: "permits@globalwings.example",
+    contactPhone: "+971 4 555 0125",
+  },
+  {
+    id: "op-savanna-air",
+    company: "Savanna Air Charter",
+    operatorId: "SAC-014",
+    country: "Kenya",
+    aocNumber: "AOC-KE-11208",
+    aocValidUntil: "2027-05-31",
+    status: "VERIFIED",
+    kycStatus: "ACTIVE",
+    contactName: "Wanjiru Kamau",
+    contactEmail: "ops@savannaair.example",
+    contactPhone: "+254 20 555 0188",
+  },
+  {
+    id: "op-atlas-cargo",
+    company: "Atlas Cargo Airlines",
+    operatorId: "ACA-027",
+    country: "Ethiopia",
+    aocNumber: "AOC-ET-33991",
+    aocValidUntil: "2028-02-29",
+    status: "VERIFIED",
+    kycStatus: "ACTIVE",
+    contactName: "Dawit Bekele",
+    contactEmail: "charters@atlascargo.example",
+    contactPhone: "+251 11 555 0142",
+  },
+  {
+    id: "op-nile-wings",
+    company: "Nile Wings",
+    operatorId: "NWA-033",
+    country: "Egypt",
+    aocNumber: "AOC-EG-77420",
+    aocValidUntil: "2027-09-30",
+    status: "VERIFIED",
+    kycStatus: "ACTIVE",
+    contactName: "Mariam Hassan",
+    contactEmail: "permits@nilewings.example",
+    contactPhone: "+20 2 555 0163",
+  },
+  {
+    id: "op-coastal-express",
+    company: "Coastal Express Airways",
+    operatorId: "CEA-009",
+    country: "South Africa",
+    aocNumber: "AOC-ZA-55410",
+    aocValidUntil: "2028-01-31",
+    status: "VERIFIED",
+    kycStatus: "ACTIVE",
+    contactName: "Thabo Nkosi",
+    contactEmail: "ops@coastalexpress.example",
+    contactPhone: "+27 11 555 0199",
+  },
+];
+
+export const aircraft: AircraftRecord[] = [
+  {
+    id: STORY_IDS.aircraft,
+    operatorId: STORY_IDS.operator,
+    registration: "A6-GWA",
+    type: "Boeing 737-800",
+    mtowKg: 79000,
+    certificates: {
+      registration: { status: "VALID", expiry: "2028-05-31", reference: "COR-UAE-77120" },
+      airworthiness: { status: "VALID", expiry: "2027-08-31", reference: "COA-UAE-30218" },
+      insurance: { status: "VALID", expiry: "2027-03-31", reference: "INS-UAE-99871" },
+      noise: { status: "VALID", expiry: "2029-01-31", reference: "NC-UAE-12045" },
+    },
+  },
+  {
+    id: "ac-5y-sac",
+    operatorId: "op-savanna-air",
+    registration: "5Y-SAC",
+    type: "De Havilland Dash 8-400",
+    mtowKg: 29000,
+    certificates: {
+      registration: { status: "VALID", expiry: "2027-11-30", reference: "COR-KE-44120" },
+      airworthiness: { status: "VALID", expiry: "2027-04-30", reference: "COA-KE-22017" },
+      insurance: { status: "EXPIRING SOON", expiry: "2026-11-20", reference: "INS-KE-55231" },
+      noise: { status: "VALID", expiry: "2028-06-30", reference: "NC-KE-12099" },
+    },
+  },
+  {
+    id: "ac-et-apl",
+    operatorId: "op-atlas-cargo",
+    registration: "ET-APL",
+    type: "Airbus A320-200",
+    mtowKg: 77000,
+    certificates: {
+      registration: { status: "VALID", expiry: "2028-03-31", reference: "COR-ET-66120" },
+      airworthiness: { status: "VALID", expiry: "2027-07-31", reference: "COA-ET-11873" },
+      insurance: { status: "VALID", expiry: "2027-02-28", reference: "INS-ET-77451" },
+      noise: { status: "VALID", expiry: "2028-12-31", reference: "NC-ET-33210" },
+    },
+  },
+  {
+    id: "ac-su-nwx",
+    operatorId: "op-nile-wings",
+    registration: "SU-NWX",
+    type: "Boeing 737-800",
+    mtowKg: 79000,
+    certificates: {
+      registration: { status: "VALID", expiry: "2028-08-31", reference: "COR-EG-90112" },
+      airworthiness: { status: "VALID", expiry: "2027-10-31", reference: "COA-EG-45090" },
+      insurance: { status: "VALID", expiry: "2027-01-31", reference: "INS-EG-11298" },
+      noise: { status: "VALID", expiry: "2029-03-31", reference: "NC-EG-67013" },
+    },
+  },
+  {
+    id: "ac-zs-cea",
+    operatorId: "op-coastal-express",
+    registration: "ZS-CEA",
+    type: "Embraer E190",
+    mtowKg: 51800,
+    certificates: {
+      registration: { status: "VALID", expiry: "2027-12-31", reference: "COR-ZA-30456" },
+      airworthiness: { status: "VALID", expiry: "2027-06-30", reference: "COA-ZA-19842" },
+      insurance: { status: "VALID", expiry: "2027-05-31", reference: "INS-ZA-88123" },
+      noise: { status: "VALID", expiry: "2028-09-30", reference: "NC-ZA-45120" },
+    },
+  },
+];
+
+export const agents: AgentRecord[] = [
+  {
+    id: STORY_IDS.agent,
+    name: "Aviation Services Ltd.",
+    agentId: "AG-001",
+    operatorId: STORY_IDS.operator,
+    authorization: "VERIFIED",
+    loaReference: "LoA-UAE-2026-338",
+    powerOfAttorney: "PoA-UAE-2026-118",
+    effectiveDate: "2026-01-15",
+    expiryDate: "2027-01-14",
+    status: "ACTIVE",
+  },
+  {
+    id: "ag-horizon-handling",
+    name: "Horizon Ground Handling",
+    agentId: "AG-014",
+    operatorId: "op-savanna-air",
+    authorization: "VERIFIED",
+    loaReference: "LoA-KE-2026-771",
+    powerOfAttorney: "PoA-KE-2026-204",
+    effectiveDate: "2026-03-01",
+    expiryDate: "2027-02-28",
+    status: "ACTIVE",
+  },
+];
+
+export const documents: DocumentRecord[] = [
+  {
+    id: "doc-gwa-company",
+    name: "Company Registration Documents",
+    category: "Company",
+    ownerType: "operator",
+    ownerId: STORY_IDS.operator,
+    status: "VALID",
+    expiry: "2028-12-31",
+    version: 2,
+    uploadedAt: "2026-02-04T08:12:00.000Z",
+    reference: "DOC-COMP-118",
+  },
+  {
+    id: "doc-gwa-aoc",
+    name: "AOC — Air Operator Certificate",
+    category: "Operator",
+    ownerType: "operator",
+    ownerId: STORY_IDS.operator,
+    status: "VALID",
+    expiry: "2027-12-31",
+    version: 3,
+    uploadedAt: "2026-02-04T08:15:00.000Z",
+    reference: "AOC-UAE-45821",
+  },
+  {
+    id: "doc-gwa-auth",
+    name: "Operator Authorization",
+    category: "Authorization",
+    ownerType: "operator",
+    ownerId: STORY_IDS.operator,
+    status: "VALID",
+    expiry: "2027-06-30",
+    version: 1,
+    uploadedAt: "2026-02-04T08:18:00.000Z",
+    reference: "OA-UAE-2026-014",
+  },
+  {
+    id: "doc-gwa-insurance",
+    name: "Insurance Certificate (Operator)",
+    category: "Insurance",
+    ownerType: "operator",
+    ownerId: STORY_IDS.operator,
+    status: "VALID",
+    expiry: "2027-03-31",
+    version: 2,
+    uploadedAt: "2026-03-10T10:05:00.000Z",
+    reference: "INS-UAE-99871",
+  },
+  {
+    id: "doc-gwa-noise",
+    name: "Noise Certificate (A6-GWA)",
+    category: "Aircraft",
+    ownerType: "aircraft",
+    ownerId: STORY_IDS.aircraft,
+    status: "VALID",
+    expiry: "2029-01-31",
+    version: 1,
+    uploadedAt: "2026-03-10T10:08:00.000Z",
+    reference: "NC-UAE-12045",
+  },
+  {
+    id: "doc-gwa-coreg",
+    name: "Certificate of Registration (A6-GWA)",
+    category: "Aircraft",
+    ownerType: "aircraft",
+    ownerId: STORY_IDS.aircraft,
+    status: "VALID",
+    expiry: "2028-05-31",
+    version: 1,
+    uploadedAt: "2026-03-10T10:10:00.000Z",
+    reference: "COR-UAE-77120",
+  },
+  {
+    id: "doc-gwa-coaw",
+    name: "Certificate of Airworthiness (A6-GWA)",
+    category: "Aircraft",
+    ownerType: "aircraft",
+    ownerId: STORY_IDS.aircraft,
+    status: "VALID",
+    expiry: "2027-08-31",
+    version: 2,
+    uploadedAt: "2026-03-10T10:12:00.000Z",
+    reference: "COA-UAE-30218",
+  },
+  {
+    id: "doc-gwa-flight",
+    name: "Flight-specific Documents",
+    category: "Flight-specific",
+    ownerType: "application",
+    ownerId: STORY_IDS.application,
+    status: "VALID",
+    expiry: "2026-10-15",
+    version: 1,
+    uploadedAt: "2026-10-10T08:40:00.000Z",
+    reference: "FSD-AAP-125",
+  },
+  {
+    id: "doc-sac-insurance",
+    name: "Insurance Certificate (5Y-SAC)",
+    category: "Insurance",
+    ownerType: "aircraft",
+    ownerId: "ac-5y-sac",
+    status: "EXPIRING SOON",
+    expiry: "2026-11-20",
+    version: 1,
+    uploadedAt: "2026-04-02T09:30:00.000Z",
+    reference: "INS-KE-55231",
+  },
+];
+
+const heroChecks: ValidationCheck[] = [
+  {
+    id: "chk-operator",
+    label: "Operator verified",
+    outcome: "PASS",
+    detail: "GWA-001 is active and verified.",
+  },
+  {
+    id: "chk-aoc",
+    label: "AOC valid",
+    outcome: "PASS",
+    detail: "AOC-UAE-45821 valid until 31 Dec 2027.",
+  },
+  {
+    id: "chk-aircraft",
+    label: "Aircraft valid",
+    outcome: "PASS",
+    detail: "A6-GWA certificates all valid.",
+  },
+  {
+    id: "chk-insurance",
+    label: "Insurance valid",
+    outcome: "PASS",
+    detail: "Insurance covers the operation window.",
+  },
+  {
+    id: "chk-docs",
+    label: "Required documents available",
+    outcome: "PASS",
+    detail: "All required documents attached.",
+  },
+  {
+    id: "chk-agent",
+    label: "Agent authorization valid",
+    outcome: "PASS",
+    detail: "Aviation Services Ltd. LoA valid to 14 Jan 2027.",
+  },
+  {
+    id: "chk-route",
+    label: "Route complete",
+    outcome: "PASS",
+    detail: "Origin, destination and route provided.",
+  },
+  {
+    id: "chk-entry",
+    label: "Entry point provided",
+    outcome: "PASS",
+    detail: "Entry point POINT-A confirmed.",
+  },
+  {
+    id: "chk-exit",
+    label: "Exit point provided",
+    outcome: "PASS",
+    detail: "Exit point POINT-B confirmed.",
+  },
+  {
+    id: "chk-schedule",
+    label: "Schedule complete",
+    outcome: "PASS",
+    detail: "Departure and arrival times complete.",
+  },
+];
+
+function allPassChecks(): ValidationCheck[] {
+  return heroChecks.map((check) => ({ ...check }));
+}
+
+function defaultFinance(total = 550): FinanceDetails {
+  return {
+    permitFee: 500,
+    processingFee: 50,
+    currency: "USD",
+    paymentStatus: total === 0 ? "UNPAID" : "PAID",
+    financialClearance: "PENDING CLEARANCE",
+    paymentMethod: total === 0 ? null : "Advance Deposit / Wallet",
+    paidAt: total === 0 ? null : "2026-10-10T08:55:00.000Z",
+    holdReason: null,
+  };
+}
+
+type ApplicationInput = {
+  id: string;
+  reference: string;
+  operatorId: string;
+  aircraftId: string;
+  authorization?: ApplicationRecord["authorization"];
+  permitKind?: ApplicationRecord["permitKind"];
+  category?: ApplicationRecord["category"];
+  flightNumber: string;
+  callSign: string;
+  routeLabel: string;
+  originIcao: string;
+  destinationIcao: string;
+  status: ApplicationRecord["status"];
+  assignedReviewer?: string;
+  createdAt: string;
+  submittedAt: string | null;
+  agentId?: string | null;
+  financialClearance?: FinanceDetails["financialClearance"];
+  permitId?: string | null;
+};
+
+function buildApplication(input: ApplicationInput): ApplicationRecord {
+  const [origin, destination] = input.routeLabel.split(" → ");
+  return {
+    id: input.id,
+    reference: input.reference,
+    operatorId: input.operatorId,
+    agentId: input.agentId ?? null,
+    aircraftId: input.aircraftId,
+    authorization: input.authorization ?? "OVERFLIGHT",
+    permitKind: input.permitKind ?? "SINGLE PERMIT",
+    category: input.category ?? "Commercial Non-Scheduled / Ad-hoc",
+    flight: {
+      flightNumber: input.flightNumber,
+      callSign: input.callSign,
+      passengerCount: input.category === "Cargo" ? 0 : 142,
+      cargo: input.category === "Cargo" ? "General Cargo" : "Checked baggage",
+      purpose: input.category === "Cargo" ? "Cargo flight" : "Commercial Flight",
+    },
+    route: {
+      origin: origin ?? "Dubai International Airport",
+      originIcao: input.originIcao,
+      destination: destination ?? "Nairobi",
+      destinationIcao: input.destinationIcao,
+      entryPoint: "POINT-A",
+      exitPoint: "POINT-B",
+      departureAt: "2026-10-15T08:30:00.000Z",
+      arrivalAt: "2026-10-15T13:15:00.000Z",
+      timezone: "UTC",
+    },
+    documentIds: [
+      "doc-gwa-company",
+      "doc-gwa-aoc",
+      "doc-gwa-auth",
+      "doc-gwa-insurance",
+      "doc-gwa-noise",
+      "doc-gwa-coreg",
+      "doc-gwa-coaw",
+      "doc-gwa-flight",
+    ],
+    validation: allPassChecks(),
+    validationResult: "PASS",
+    finance: {
+      ...defaultFinance(),
+      financialClearance: input.financialClearance ?? "PENDING CLEARANCE",
+    },
+    status: input.status,
+    assignedReviewer: input.assignedReviewer ?? STORY_IDS.reviewer,
+    createdAt: input.createdAt,
+    submittedAt: input.submittedAt,
+    permitId: input.permitId ?? null,
+    history: [
+      {
+        status: "DRAFT",
+        at: input.createdAt,
+        by: STORY_IDS.operatorActor,
+        role: "operator",
+        note: "Application created.",
+      },
+      ...(input.submittedAt
+        ? [
+            {
+              status: "SUBMITTED" as const,
+              at: input.submittedAt,
+              by: STORY_IDS.operatorActor,
+              role: "operator" as const,
+              note: "Application submitted for review.",
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+export const applications: ApplicationRecord[] = [
+  buildApplication({
+    id: STORY_IDS.application,
+    reference: STORY_IDS.applicationReference,
+    operatorId: STORY_IDS.operator,
+    aircraftId: STORY_IDS.aircraft,
+    flightNumber: "GW452",
+    callSign: "GWA452",
+    routeLabel: "Dubai International Airport (OMDB) → Nairobi (HKJK)",
+    originIcao: "OMDB",
+    destinationIcao: "HKJK",
+    status: "DRAFT",
+    agentId: STORY_IDS.agent,
+    createdAt: "2026-10-10T08:35:00.000Z",
+    submittedAt: null,
+  }),
+  buildApplication({
+    id: "app-aap-2026-00118",
+    reference: "AAP-2026-00118",
+    operatorId: "op-savanna-air",
+    aircraftId: "ac-5y-sac",
+    flightNumber: "SA310",
+    callSign: "SAV310",
+    routeLabel: "Nairobi (HKJK) → Zanzibar (HTZA)",
+    originIcao: "HKJK",
+    destinationIcao: "HTZA",
+    status: "SUBMITTED",
+    createdAt: "2026-10-09T11:20:00.000Z",
+    submittedAt: "2026-10-09T11:45:00.000Z",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00119",
+    reference: "AAP-2026-00119",
+    operatorId: "op-atlas-cargo",
+    aircraftId: "ac-et-apl",
+    category: "Cargo",
+    flightNumber: "AC778",
+    callSign: "ATL778",
+    routeLabel: "Addis Ababa (HAAB) → Djibouti (HDAM)",
+    originIcao: "HAAB",
+    destinationIcao: "HDAM",
+    status: "UNDER REVIEW",
+    createdAt: "2026-10-09T08:05:00.000Z",
+    submittedAt: "2026-10-09T08:40:00.000Z",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00120",
+    reference: "AAP-2026-00120",
+    operatorId: "op-nile-wings",
+    aircraftId: "ac-su-nwx",
+    flightNumber: "NW902",
+    callSign: "NIL902",
+    routeLabel: "Cairo (HECA) → Khartoum (HSSK)",
+    originIcao: "HECA",
+    destinationIcao: "HSSK",
+    status: "AWAITING FINANCE",
+    createdAt: "2026-10-08T13:15:00.000Z",
+    submittedAt: "2026-10-08T13:50:00.000Z",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00121",
+    reference: "AAP-2026-00121",
+    operatorId: "op-coastal-express",
+    aircraftId: "ac-zs-cea",
+    flightNumber: "CE511",
+    callSign: "CEA511",
+    routeLabel: "Johannesburg (FAOR) → Gaborone (FBSK)",
+    originIcao: "FAOR",
+    destinationIcao: "FBSK",
+    status: "TECHNICAL REVIEW",
+    createdAt: "2026-10-08T09:30:00.000Z",
+    submittedAt: "2026-10-08T10:05:00.000Z",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00122",
+    reference: "AAP-2026-00122",
+    operatorId: "op-savanna-air",
+    aircraftId: "ac-5y-sac",
+    flightNumber: "SA122",
+    callSign: "SAV122",
+    routeLabel: "Mombasa (HKMO) → Dar es Salaam (HTDA)",
+    originIcao: "HKMO",
+    destinationIcao: "HTDA",
+    status: "AWAITING FINAL APPROVAL",
+    createdAt: "2026-10-07T14:00:00.000Z",
+    submittedAt: "2026-10-07T14:30:00.000Z",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00123",
+    reference: "AAP-2026-00123",
+    operatorId: "op-atlas-cargo",
+    aircraftId: "ac-et-apl",
+    category: "Cargo",
+    flightNumber: "AC640",
+    callSign: "ATL640",
+    routeLabel: "Addis Ababa (HAAB) → Nairobi (HKJK)",
+    originIcao: "HAAB",
+    destinationIcao: "HKJK",
+    status: "ISSUED",
+    createdAt: "2026-10-05T07:45:00.000Z",
+    submittedAt: "2026-10-05T08:10:00.000Z",
+    permitId: "prm-caa-of-2026-00448",
+    financialClearance: "CLEARED",
+  }),
+  buildApplication({
+    id: "app-aap-2026-00124",
+    reference: "AAP-2026-00124",
+    operatorId: "op-nile-wings",
+    aircraftId: "ac-su-nwx",
+    flightNumber: "NW455",
+    callSign: "NIL455",
+    routeLabel: "Cairo (HECA) → Jeddah (OEJN)",
+    originIcao: "HECA",
+    destinationIcao: "OEJN",
+    status: "RETURNED",
+    createdAt: "2026-10-06T12:00:00.000Z",
+    submittedAt: "2026-10-06T12:25:00.000Z",
+  }),
+];
+
+export const permits: PermitRecord[] = [
+  {
+    id: "prm-caa-of-2026-00448",
+    permitNumber: "CAA-OF-2026-00448",
+    applicationReference: "AAP-2026-00123",
+    operatorId: "op-atlas-cargo",
+    aircraftId: "ac-et-apl",
+    authorization: "OVERFLIGHT",
+    flightNumber: "AC640",
+    routeLabel: "Addis Ababa → Nairobi",
+    entryPoint: "POINT-A",
+    exitPoint: "POINT-B",
+    validFrom: "2026-10-05",
+    validUntil: "2026-10-05",
+    status: "ISSUED",
+    version: 1,
+    issuedAt: "2026-10-05T15:30:00.000Z",
+    signedBy: STORY_IDS.approver,
+    checksum: "9F3A-C21D-77B0",
+    verificationReference: "VRF-448-2026",
+    revisionIds: [],
+  },
+];
+
+export const revisions: DemoWorld["revisions"] = [];
+
+export const audit: AuditEntry[] = [
+  {
+    id: "aud-001",
+    at: "2026-10-05T08:10:00.000Z",
+    actor: "Atlas Cargo Airlines",
+    role: "operator",
+    action: "Application submitted",
+    status: "SUBMITTED",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "DRAFT",
+    newValue: "SUBMITTED",
+  },
+  {
+    id: "aud-002",
+    at: "2026-10-05T10:40:00.000Z",
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: "Recommended approval",
+    status: "AWAITING FINANCE",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "UNDER REVIEW",
+    newValue: "AWAITING FINANCE",
+  },
+  {
+    id: "aud-003",
+    at: "2026-10-05T12:15:00.000Z",
+    actor: STORY_IDS.financeOfficer,
+    role: "finance",
+    action: "Financial clearance",
+    status: "TECHNICAL REVIEW",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "PENDING CLEARANCE",
+    newValue: "CLEARED",
+  },
+  {
+    id: "aud-004",
+    at: "2026-10-05T13:50:00.000Z",
+    actor: STORY_IDS.reviewer,
+    role: "reviewer",
+    action: "Technical review passed",
+    status: "AWAITING FINAL APPROVAL",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "TECHNICAL REVIEW",
+    newValue: "AWAITING FINAL APPROVAL",
+  },
+  {
+    id: "aud-005",
+    at: "2026-10-05T15:20:00.000Z",
+    actor: STORY_IDS.approver,
+    role: "approver",
+    action: "Permit approved",
+    status: "APPROVED",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "AWAITING FINAL APPROVAL",
+    newValue: "APPROVED",
+  },
+  {
+    id: "aud-006",
+    at: "2026-10-05T15:30:00.000Z",
+    actor: "System",
+    role: "approver",
+    action: "Digital permit issued",
+    status: "ISSUED",
+    applicationReference: "AAP-2026-00123",
+    oldValue: "APPROVED",
+    newValue: "ISSUED",
+  },
+];
+
+export const notifications: NotificationRecord[] = [
+  {
+    id: "ntf-001",
+    targetRole: "operator",
+    type: "DOCUMENT",
+    text: "Insurance certificate for 5Y-SAC is expiring soon.",
+    time: "2026-10-09T07:30:00.000Z",
+    read: false,
+  },
+  {
+    id: "ntf-002",
+    targetRole: "operator",
+    type: "APPLICATION",
+    text: "Application AAP-2026-00124 was returned for correction.",
+    time: "2026-10-06T13:00:00.000Z",
+    read: false,
+  },
+  {
+    id: "ntf-003",
+    targetRole: "reviewer",
+    type: "APPLICATION",
+    text: "New application AAP-2026-00118 is awaiting review.",
+    time: "2026-10-09T11:50:00.000Z",
+    read: false,
+  },
+  {
+    id: "ntf-004",
+    targetRole: "finance",
+    type: "PAYMENT",
+    text: "Payment received for AAP-2026-00120.",
+    time: "2026-10-08T14:10:00.000Z",
+    read: false,
+  },
+  {
+    id: "ntf-005",
+    targetRole: "approver",
+    type: "APPROVAL",
+    text: "Application AAP-2026-00122 is awaiting final approval.",
+    time: "2026-10-07T16:00:00.000Z",
+    read: false,
+  },
+  {
+    id: "ntf-006",
+    targetRole: "public",
+    type: "PERMIT",
+    text: "Permit CAA-OF-2026-00448 issued and verifiable.",
+    time: "2026-10-05T15:31:00.000Z",
+    read: true,
+  },
+];
+
+export const rbacRoles: RbacRole[] = [
+  {
+    key: "super-admin",
+    label: "Super Admin",
+    side: "Authority Side",
+    description: "Full system administration.",
+  },
+  {
+    key: "permit-reviewer",
+    label: "Permit Reviewer",
+    side: "Authority Side",
+    description: "Reviews applications and recommends approval.",
+  },
+  {
+    key: "permit-approver",
+    label: "Permit Approver",
+    side: "Authority Side",
+    description: "Approves and issues permits.",
+  },
+  {
+    key: "finance-officer",
+    label: "Finance Officer",
+    side: "Authority Side",
+    description: "Verifies payment and clears funds.",
+  },
+  {
+    key: "operator-admin",
+    label: "Operator Admin",
+    side: "Customer Side",
+    description: "Manages the operator account.",
+  },
+  {
+    key: "permit-officer",
+    label: "Permit Officer",
+    side: "Customer Side",
+    description: "Prepares and submits applications.",
+  },
+  {
+    key: "operator-finance",
+    label: "Finance Officer",
+    side: "Customer Side",
+    description: "Manages operator payments.",
+  },
+  { key: "viewer", label: "Viewer", side: "Customer Side", description: "Read-only access." },
+];
+
+export const rbacPermissions: RbacPermission[] = [
+  { key: "app.create", label: "Create application", roles: ["operator"] },
+  { key: "app.submit", label: "Submit application", roles: ["operator"] },
+  { key: "app.review", label: "Review application", roles: ["reviewer"] },
+  { key: "app.recommend", label: "Recommend approval", roles: ["reviewer"] },
+  { key: "finance.clear", label: "Clear financial hold", roles: ["finance"] },
+  { key: "tech.review", label: "Pass technical review", roles: ["reviewer"] },
+  { key: "permit.approve", label: "Approve permit", roles: ["approver"] },
+  { key: "permit.issue", label: "Issue digital permit", roles: ["approver"] },
+  { key: "permit.revise", label: "Request revision", roles: ["operator"] },
+  { key: "permit.revise.approve", label: "Approve revision", roles: ["approver"] },
+  { key: "audit.view", label: "View audit trail", roles: ["reviewer", "finance", "approver"] },
+  { key: "verify.public", label: "Verify permit (public)", roles: ["public"] },
+];
+
+export const counters: Counters = {
+  newApplications: 1,
+  underReview: 1,
+  awaitingFinance: 1,
+  technicalReview: 1,
+  awaitingApproval: 1,
+  approved: 1,
+  issued: 1,
+};
+
+export const wallet: DemoWorld["wallet"] = {
+  balance: 2000,
+  currency: "USD",
+  outstanding: 0,
+};
+
+export const authority: DemoWorld["authority"] = {
+  name: "Civil Aviation Authority",
+  shortName: "CAA",
+  address: "Aviation House, Airport Road",
+  contactEmail: "permits@caa.gov.example",
+  contactPhone: "+000 20 555 0100",
+  signatory: "A. Mwangi, Director of Air Transport",
+};
+
+export const WORLD: DemoWorld = {
+  authority,
+  operator: operators[0],
+  aircraft,
+  agents,
+  documents,
+  applications,
+  permits,
+  revisions,
+  audit,
+  notifications,
+  rbacRoles,
+  rbacPermissions,
+  counters,
+  wallet,
+};
+
+export type { CounterKey };

@@ -1,0 +1,396 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+/*
+ * AAPIMS design tokens.
+ * Navy + aviation blue institutional palette for a government / aviation
+ * authority audience. All colours live here. Components must use semantic
+ * utilities (bg-primary, text-accent, border-border-soft, ...) and never raw hex.
+ */
+
+@theme inline {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  /* Core brand */
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-info: var(--secondary);
+  --color-seal: var(--seal);
+
+  /* Surfaces */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Text */
+  --color-text-dark: var(--text-dark);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* Lines */
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Generic status language (keep names used by shared primitives) */
+  --color-requested: var(--status-requested);
+  --color-warning: var(--status-pending);
+  --color-pending: var(--status-pending);
+  --color-confirmed: var(--status-confirmed);
+  --color-declined: var(--status-declined);
+  --color-completed: var(--status-completed);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Soft status tints + overlays */
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-info-soft: var(--info-soft);
+  --color-hero-overlay: var(--hero-overlay);
+
+  /* Permit lifecycle status language */
+  --color-status-draft: var(--status-draft);
+  --color-status-draft-soft: var(--status-draft-soft);
+  --color-status-submitted: var(--status-submitted);
+  --color-status-submitted-soft: var(--status-submitted-soft);
+  --color-status-review: var(--status-review);
+  --color-status-review-soft: var(--status-review-soft);
+  --color-status-awaiting: var(--status-awaiting);
+  --color-status-awaiting-soft: var(--status-awaiting-soft);
+  --color-status-cleared: var(--status-cleared);
+  --color-status-cleared-soft: var(--status-cleared-soft);
+  --color-status-approved: var(--status-approved);
+  --color-status-approved-soft: var(--status-approved-soft);
+  --color-status-issued: var(--status-issued);
+  --color-status-issued-soft: var(--status-issued-soft);
+  --color-status-revision: var(--status-revision);
+  --color-status-revision-soft: var(--status-revision-soft);
+  --color-status-rejected: var(--status-rejected);
+  --color-status-rejected-soft: var(--status-rejected-soft);
+  --color-status-returned: var(--status-returned);
+  --color-status-returned-soft: var(--status-returned-soft);
+  --color-status-expired: var(--status-expired);
+  --color-status-expired-soft: var(--status-expired-soft);
+
+  /* Desktop portal sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-pill: 9999px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 3px rgba(11, 37, 69, 0.08), 0 1px 2px rgba(11, 37, 69, 0.06);
+  --shadow-float: 0 16px 40px -20px rgba(11, 37, 69, 0.4);
+  --shadow-frame: 0 40px 90px -32px rgba(6, 26, 51, 0.55);
+}
+
+:root {
+  /* Raw brand palette (single source of truth) */
+  --navy: #0b2545;
+  --navy-soft: #123a63;
+  --navy-deep: #071a31;
+
+  --blue: #1c6fbf;
+  --blue-pressed: #15548f;
+  --blue-bright: #2d7de0;
+
+  --white: #ffffff;
+
+  /* Official permit seal accent (used only for the e-permit) */
+  --seal: #b8860b;
+
+  /* Neutrals */
+  --background: #f5f7fa;
+  --surface: #ffffff;
+  --surface-muted: #eef2f7;
+
+  --text-dark: #0f1e2e;
+  --text-muted: #5a6b7c;
+  --text-subtle: #8a97a8;
+
+  --border: #d9e1ea;
+  --border-soft: #e6ebf2;
+  --border-strong: #c2ccda;
+
+  /* Semantic aliases (default brand: navy + aviation blue) */
+  --primary: var(--navy);
+  --primary-soft: var(--navy-soft);
+  --primary-deep: var(--navy-deep);
+  --primary-foreground: var(--white);
+
+  --accent: var(--blue);
+  --accent-pressed: var(--blue-pressed);
+  --accent-foreground: var(--white);
+
+  --secondary: var(--blue-bright);
+  --secondary-foreground: var(--white);
+  --success: #15803d;
+
+  /* shadcn-compatible aliases so generated primitives resolve */
+  --foreground: var(--text-dark);
+  --card: var(--surface);
+  --card-foreground: var(--text-dark);
+  --popover: var(--surface);
+  --popover-foreground: var(--text-dark);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--blue);
+
+  --destructive: #b91c1c;
+  --destructive-foreground: var(--white);
+
+  /* Generic status language */
+  --status-requested: #2563eb;
+  --status-pending: #b45309;
+  --status-confirmed: #047857;
+  --status-declined: #b91c1c;
+  --status-completed: #64748b;
+
+  /* Soft status tints for banners, pills and chips */
+  --success-soft: #dcfce7;
+  --warning-soft: #fef3c7;
+  --danger-soft: #fee2e2;
+  --info-soft: #e8f1fb;
+
+  /* Overlay laid over hero images */
+  --hero-overlay: rgba(7, 26, 49, 0.72);
+
+  /* Permit lifecycle status language */
+  --status-draft: #64748b;
+  --status-draft-soft: #f1f5f9;
+  --status-submitted: #2563eb;
+  --status-submitted-soft: #dbeafe;
+  --status-review: #1d4ed8;
+  --status-review-soft: #dbeafe;
+  --status-awaiting: #b45309;
+  --status-awaiting-soft: #fef3c7;
+  --status-cleared: #15803d;
+  --status-cleared-soft: #dcfce7;
+  --status-approved: #047857;
+  --status-approved-soft: #d1fae5;
+  --status-issued: #0f766e;
+  --status-issued-soft: #ccfbf1;
+  --status-revision: #6d28d9;
+  --status-revision-soft: #ede9fe;
+  --status-rejected: #b91c1c;
+  --status-rejected-soft: #fee2e2;
+  --status-returned: #c2410c;
+  --status-returned-soft: #ffedd5;
+  --status-expired: #78716c;
+  --status-expired-soft: #f5f5f4;
+
+  /* Desktop portal sidebar */
+  --sidebar: var(--navy);
+  --sidebar-foreground: var(--white);
+  --sidebar-primary: var(--blue);
+  --sidebar-primary-foreground: var(--white);
+  --sidebar-accent: var(--navy-soft);
+  --sidebar-accent-foreground: var(--white);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+}
+
+html,
+body {
+  font-family:
+    "Inter",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  background-color: var(--background);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbars inside device frames */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Institutional motif: animated dashed route lines */
+@keyframes aa-route-dash {
+  to {
+    stroke-dashoffset: -1386;
+  }
+}
+.aa-route-dash {
+  animation: aa-route-dash 118.8s linear infinite;
+}
+
+@keyframes aa-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.45;
+  }
+}
+.aa-pulse {
+  animation: aa-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes aa-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.aa-float {
+  animation: aa-float 4s ease-in-out infinite;
+}
+
+@keyframes aa-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.aa-fade-up {
+  animation: aa-fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Loading skeleton shimmer */
+@keyframes aa-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.aa-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-muted) 25%,
+    var(--border-soft) 50%,
+    var(--surface-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: aa-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Sheet / dialog / toast entrance */
+@keyframes aa-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.aa-slide-up {
+  animation: aa-slide-up 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Desktop detail drawer slide-in from the right */
+@keyframes aa-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.aa-slide-in-right {
+  animation: aa-slide-in-right 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Brief highlight when a new list item appears */
+@keyframes aa-highlight {
+  from {
+    background-color: var(--warning-soft);
+  }
+  to {
+    background-color: var(--surface);
+  }
+}
+.aa-highlight {
+  animation: aa-highlight 2s ease-out 1 both;
+}
+
+/* Stamp / seal press-in on the e-permit */
+@keyframes aa-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.4) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
+.aa-stamp {
+  animation: aa-stamp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/*
+ * Accessibility: honour the user's reduced-motion preference everywhere.
+ * Decorative motion stops; press feedback still resolves instantly.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .aa-route-dash,
+  .aa-pulse,
+  .aa-float,
+  .aa-fade-up,
+  .aa-shimmer,
+  .aa-slide-up,
+  .aa-slide-in-right,
+  .aa-highlight,
+  .aa-stamp {
+    animation: none !important;
+  }
+}

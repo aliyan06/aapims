@@ -1,0 +1,115 @@
+import { describe, expect, it } from "vitest";
+import { STORY_IDS } from "@/data/types";
+import { buildInitialState } from "./initial-state";
+import {
+  approvePermit,
+  approveRevision,
+  clearFinancialHold,
+  issuePermit,
+  passTechnicalReview,
+  recommendApproval,
+  rejectPermit,
+  requestInformation,
+  requestRevision,
+  submitApplication,
+} from "./transitions";
+
+const APP = STORY_IDS.application;
+
+function heroStatus(state: ReturnType<typeof buildInitialState>) {
+  return state.world.applications.find((item) => item.id === APP)?.status;
+}
+
+describe("permit workflow transitions", () => {
+  it("walks the hero application through the full lifecycle", () => {
+    const state = buildInitialState();
+    expect(heroStatus(state)).toBe("DRAFT");
+
+    expect(submitApplication(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("SUBMITTED");
+
+    expect(recommendApproval(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("AWAITING FINANCE");
+
+    expect(clearFinancialHold(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("TECHNICAL REVIEW");
+
+    expect(passTechnicalReview(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("AWAITING FINAL APPROVAL");
+
+    expect(approvePermit(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("APPROVED");
+
+    expect(issuePermit(state, APP).ok).toBe(true);
+    expect(heroStatus(state)).toBe("ISSUED");
+
+    const permit = state.world.permits.find((item) => item.permitNumber === STORY_IDS.permitNumber);
+    expect(permit).toBeDefined();
+    expect(permit?.version).toBe(1);
+  });
+
+  it("records an audit entry for every status change", () => {
+    const state = buildInitialState();
+    const before = state.world.audit.length;
+    submitApplication(state, APP);
+    recommendApproval(state, APP);
+    expect(state.world.audit.length).toBe(before + 2);
+    expect(state.world.audit[0].applicationReference).toBe(STORY_IDS.applicationReference);
+  });
+
+  it("enforces preconditions instead of skipping the pipeline", () => {
+    const state = buildInitialState();
+    const result = recommendApproval(state, APP);
+    expect(result.ok).toBe(false);
+    expect(result.toast?.tone).toBe("error");
+    expect(heroStatus(state)).toBe("DRAFT");
+  });
+
+  it("never lets counters go negative", () => {
+    const state = buildInitialState();
+    requestInformation(state, APP);
+    requestInformation(state, APP);
+    for (const value of Object.values(state.world.counters)) {
+      expect(value).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("supports revision and reissue (V1 -> V2)", () => {
+    const state = buildInitialState();
+    submitApplication(state, APP);
+    recommendApproval(state, APP);
+    clearFinancialHold(state, APP);
+    passTechnicalReview(state, APP);
+    approvePermit(state, APP);
+    issuePermit(state, APP);
+
+    const revisionResult = requestRevision(state, {
+      permitId: STORY_IDS.permit,
+      type: "Date / Time Change",
+      originalValue: "08:30 UTC",
+      newValue: "10:00 UTC",
+      reason: "Operational schedule change",
+    });
+    expect(revisionResult.ok).toBe(true);
+    expect(heroStatus(state)).toBe("REVISION REQUESTED");
+
+    const revision = state.world.revisions[0];
+    expect(revision.status).toBe("PENDING");
+
+    expect(approveRevision(state, revision.id).ok).toBe(true);
+    expect(heroStatus(state)).toBe("REISSUED");
+    const permit = state.world.permits.find((item) => item.permitNumber === STORY_IDS.permitNumber);
+    expect(permit?.version).toBe(2);
+    expect(permit?.status).toBe("REISSUED");
+  });
+
+  it("rejects a permit from the approval stage", () => {
+    const state = buildInitialState();
+    submitApplication(state, APP);
+    recommendApproval(state, APP);
+    clearFinancialHold(state, APP);
+    passTechnicalReview(state, APP);
+    expect(rejectPermit(state, APP, "Does not meet requirements").ok).toBe(true);
+    expect(heroStatus(state)).toBe("REJECTED");
+  });
+});
